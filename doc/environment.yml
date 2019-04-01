@@ -1,0 +1,13 @@
+name: xhistogram
+dependencies:
+  - python=3.6
+  - xarray
+  - numpy>=1.16
+  - pytest
+  - numpydoc
+  - sphinx
+  - ipython
+  - matplotlib
+  - pip:
+    - docrep
+    - nbsphinx

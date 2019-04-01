@@ -1,0 +1,35 @@
+# Based on http://conda.pydata.org/docs/travis.html
+language: python
+sudo: false # use container based build
+notifications:
+  email: false
+
+matrix:
+  fast_finish: true
+  include:
+  - python: 3.6
+    env: CONDA_ENV=py36
+
+before_install:
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget http://repo.continuum.io/miniconda/Miniconda-3.16.0-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
+install:
+  - conda env create --file ci/environment-$CONDA_ENV.yml
+  - source activate test_env
+  - pip install -e .
+
+script:
+  - py.test -v --cov=xhistogram --cov-config .coveragerc --cov-report term-missing
+
+after_success:
+  - codecov

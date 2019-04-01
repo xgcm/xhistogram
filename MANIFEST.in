@@ -1,0 +1,3 @@
+include LICENSE
+include versioneer.py
+include xhistogram/_version.py
