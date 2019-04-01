@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..ufuncs import _histogram_2d_vectorized, histogram
+from ..numpy import _histogram_2d_vectorized, histogram
 from itertools import combinations
 
 def test_histogram_2d_vectorized():
