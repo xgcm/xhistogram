@@ -34,3 +34,74 @@ def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
     return bc_offset_reshape[:, 1:-1]
+
+
+def histogram(a, bins, axis=None, weights=None, density=False, right=False):
+    """Histogram applied along specified axis / axes.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data. The histogram is computed over the specified axes.
+    bins : array_like
+        Bin edges. Must be specified explicitly. The size of the output
+        dimension will be ``len(bins) - 1``.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the histogram is computed. The default is to
+        compute the histogram of the flattened array
+    weights : array_like, optional
+        An array of weights, of the same shape as `a`.  Each value in
+        `a` only contributes its associated weight towards the bin count
+        (instead of 1). If `density` is True, the weights are
+        normalized, so that the integral of the density over the range
+        remains 1.
+    density : bool, optional
+        If ``False``, the result will contain the number of samples in
+        each bin. If ``True``, the result is the value of the
+        probability *density* function at the bin, normalized such that
+        the *integral* over the range is 1. Note that the sum of the
+        histogram values will not be equal to 1 unless bins of unity
+        width are chosen; it is not a probability *mass* function.
+    right : bool, optional
+        Indicating whether the intervals include the right or the left bin
+        edge. Default behavior is (right==False) indicating that the interval
+        does not include the right edge.
+
+    Returns
+    -------
+    hist : array
+        The values of the histogram.
+
+    See Also
+    --------
+    bincount, histogram, digitize
+    """
+
+    if axis is not None:
+        axis = np.atleast_1d(axis)
+        assert axis.ndim == 1
+
+    keep_shape = axis is None or (len(axis) == a.ndim)
+    if keep_shape:
+        # should be the same thing
+        #f, _ = np.histogram(a, bins=bins, weights=weights, density=density)
+        d = a.ravel()[None, :]
+    else:
+        new_pos = tuple(range(-len(axis), 0))
+        c = np.moveaxis(a, axis, new_pos)
+        split_idx = c.ndim - len(axis)
+        dims_0 = c.shape[:split_idx]
+        dims_1 = c.shape[split_idx:]
+        new_dim_0 = np.prod(dims_0)
+        new_dim_1 = np.prod(dims_1)
+        d = np.reshape(c, (new_dim_0, new_dim_1))
+    e = _histogram_2d_vectorized(d, bins, weights=weights, density=density,
+                                 right=right)
+
+    if keep_shape:
+        f = e.squeeze()
+    else:
+        final_shape = dims_0 + (-1,)
+        f = np.reshape(e, final_shape)
+
+    return f
