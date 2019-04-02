@@ -1,7 +1,7 @@
 """Numpy functions for vectorized histograms."""
 
 import numpy as np
-from .duck_array_ops import digitize
+from .duck_array_ops import digitize, bincount
 
 def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
     """Calculate the histogram independently on each row of a 2D array"""
@@ -33,7 +33,7 @@ def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
     M = nrows
     N = nbins+1
     bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
-    bc_offset = np.bincount(bin_indices_offset, weights=weights,
+    bc_offset = bincount(bin_indices_offset, weights=weights,
                             minlength=N*M)
     bc_offset_reshape = bc_offset.reshape(M, -1)
 
