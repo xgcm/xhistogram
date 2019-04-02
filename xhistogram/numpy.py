@@ -1,6 +1,7 @@
 """Numpy functions for vectorized histograms."""
 
 import numpy as np
+from .duck_array_ops import digitize
 
 def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
     """Calculate the histogram independently on each row of a 2D array"""
@@ -13,12 +14,17 @@ def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
     nrows, ncols = a.shape
     nbins = len(bins)
 
+    # a marginally faster implementation would be to use searchsorted,
+    # like numpy histogram itself does
+    # https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L864-L882
+    # for now we stick with `digitize` because it's easy to understand how it works
+
     # the maximum possible value of of bin_indices is nbins
     # for right=False:
     #   - 0 corresponds to a < bins[0]
     #   - i corresponds to bins[i-1] <= a < bins[i]
     #   - nbins corresponds to a a >= bins[1]
-    bin_indices = np.digitize(a, bins)
+    bin_indices = digitize(a, bins)
 
     # now the tricks to apply bincount on an axis-by-axis basis
     # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
