@@ -33,6 +33,11 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
     # now we need to add an offset to the indices and concat them
     # this is wrong! number of indices increases geometrically
+
+    # n bins on a[0]
+    # m bins on a[1]
+    # n*m bins --> need the product
+
     offsets = np.cumsum([0,] + hist_shapes[:-1])
     all_bin_indices = concatenate([offset + bin_index
                                    for offset, bin_index in zip(offsets, each_bin_indices)],
