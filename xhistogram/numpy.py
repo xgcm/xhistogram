@@ -1,45 +1,59 @@
 """Numpy functions for vectorized histograms."""
 
 import numpy as np
-from .duck_array_ops import digitize, bincount
+from .duck_array_ops import digitize, bincount, concatenate
 
-def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
+def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, right=False):
     """Calculate the histogram independently on each row of a 2D array"""
-    assert a.ndim == 2
-    assert bins.ndim == 1
-    if weights is not None:
-        assert weights.shape == a.shape
-        weights = weights.ravel()
+
+    N_inputs = len(args):
+    assert len(bins) == N_inputs
+    for a, b in zip(args, bins):
+        assert a.ndim == 2
+        assert b.ndim == 1
+        if weights is not None:
+            assert weights.shape == a.shape
+    weights = weights.ravel()
 
     nrows, ncols = a.shape
-    nbins = len(bins)
+    nbins = [len(b) for b in bins]
+    hist_shapes = [nb+1 for nb in nbins]
+    final_shape = (nrows,) + tuple(hist_shapes)
 
     # a marginally faster implementation would be to use searchsorted,
     # like numpy histogram itself does
     # https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L864-L882
     # for now we stick with `digitize` because it's easy to understand how it works
 
-    # the maximum possible value of of bin_indices is nbins
+    # the maximum possible value of of digitize is nbins
     # for right=False:
-    #   - 0 corresponds to a < bins[0]
-    #   - i corresponds to bins[i-1] <= a < bins[i]
-    #   - nbins corresponds to a a >= bins[1]
-    bin_indices = digitize(a, bins)
+    #   - 0 corresponds to a < b[0]
+    #   - i corresponds to bins[i-1] <= a < b[i]
+    #   - nbins corresponds to a a >= b[1]
+    each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
+    # now we need to add an offset to the indices and concat them
+    # this is wrong! number of indices increases geometrically
+    offsets = np.cumsum([0,] + hist_shapes[:-1])
+    all_bin_indices = concatenate([offset + bin_index
+                                   for offset, bin_index in zip(offsets, each_bin_indices)],
+                                  axis=1)
 
     # now the tricks to apply bincount on an axis-by-axis basis
     # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
     # https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy
 
     M = nrows
-    N = nbins+1
-    bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
+    N = sum(hist_shapes)
+    bin_indices_offset = (all_bin_indices + (N * np.arange(M)[:, None])).ravel()
     bc_offset = bincount(bin_indices_offset, weights=weights,
                             minlength=N*M)
-    bc_offset_reshape = bc_offset.reshape(M, -1)
+
+    bc_offset_reshape = bc_offset.reshape(final_shape)
 
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
-    return bc_offset_reshape[:, 1:-1]
+    slices = (slice(),) + N_inputs * (slice(1, -1))
+    return bc_offset_reshape[slices]
 
 
 def histogram(a, bins, axis=None, weights=None, density=False, right=False):
