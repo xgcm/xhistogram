@@ -30,4 +30,3 @@ def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
 
 digitize = _dask_or_eager_func('digitize')
 bincount = _dask_or_eager_func('bincount')
-concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
