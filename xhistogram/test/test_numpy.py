@@ -9,23 +9,43 @@ def test_histogram_results_1d():
     data = np.random.randn(nrows, ncols)
     bins = np.linspace(-4, 4, 10)
 
-    h2d = histogram(data, bins=bins, axis=1)
-    assert h2d.shape == (nrows, len(bins)-1)
+    h = histogram(data, bins=bins, axis=1)
+    assert h.shape == (nrows, len(bins)-1)
 
     # make sure we get the same thing as histogram
     hist, _ = np.histogram(data, bins=bins)
-    np.testing.assert_array_equal(hist, h2d.sum(axis=0))
+    np.testing.assert_array_equal(hist, h.sum(axis=0))
 
     # now try with no axis
-    h2d_na = histogram(data, bins=bins)
-    np.testing.assert_array_equal(hist, h2d_na)
+    h_na = histogram(data, bins=bins)
+    np.testing.assert_array_equal(hist, h_na)
 
     # check that weights works
-    h2d_d = histogram(data, bins=bins, axis=1, weights=2*np.ones_like(data))
-    np.testing.assert_array_equal(2*h2d, h2d_d)
+    h_d = histogram(data, bins=bins, axis=1, weights=2*np.ones_like(data))
+    np.testing.assert_array_equal(2*h, h_d)
+
+
+def test_histogram_results_2d():
+    nrows, ncols = 5, 20
+    data_a = np.random.randn(nrows, ncols)
+    data_b = np.random.randn(nrows, ncols)
+    nbins_a = 9
+    bins_a = np.linspace(-4, 4, nbins_a + 1)
+    nbins_b = 10
+    bins_b = np.linspace(-4, 4, nbins_b + 1)
+
+    h = histogram(data_a, data_b, bins=[bins_a, bins_b])
+    assert h.shape == (nbins_a, nbins_b)
+
+    hist, _, _ = np.histogram2d(data_a.ravel(), data_b.ravel(),
+                                bins=[bins_a, bins_b])
+    np.testing.assert_array_equal(hist, h)
 
 
 def test_histogram_shape():
+    """These tests just verify that arrays with the right shape come out.
+    They don't verify correctness."""
+
     b = np.random.randn(10, 15, 12, 20)
     bins = np.linspace(-4, 4, 27)
 

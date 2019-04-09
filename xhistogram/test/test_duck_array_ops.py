@@ -43,6 +43,7 @@ def test_digitize_dask_correct(chunks):
     d = digitize(a, bins)
     dd = digitize(da, bins)
     np.testing.assert_array_equal(d, dd.compute())
+    
 
 def test_ravel_multi_index_correct():
     arr = np.array([[3,6,6],[4,5,1]])

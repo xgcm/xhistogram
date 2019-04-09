@@ -2,14 +2,23 @@
 
 import numpy as np
 from functools import reduce
-from .duck_array_ops import digitize, bincount, concatenate
+from .duck_array_ops import digitize, bincount, ravel_multi_index
+
+
+def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
+    if len(bins) == N_expected:
+        return bins
+    elif N_expected==1:
+        return [bins]
+    else:
+        raise ValueError("Can't figure out what to do with bins.")
+
 
 def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, right=False):
     """Calculate the histogram independently on each row of a 2D array"""
 
     N_inputs = len(args)
-    bins = np.atleast_2d(np.asarray(bins))
-    assert len(bins) == N_inputs
+    bins = _ensure_bins_is_a_list_of_arrays(bins, N_inputs)
     a0 = args[0]
 
     # consistency checks for inputa
@@ -38,7 +47,10 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     #   - nbins corresponds to a a >= b[1]
     each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
     # product of the bins gives the joint distribution
-    bin_indices = reduce(lambda x, y: x*y, each_bin_indices)
+    if N_inputs > 1:
+        bin_indices = ravel_multi_index(each_bin_indices, hist_shapes)
+    else:
+        bin_indices = each_bin_indices[0]
     # total number of unique bin indices
     N = reduce(lambda x, y: x*y, hist_shapes)
 
