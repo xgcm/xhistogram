@@ -1,4 +1,7 @@
-"""Numpy functions for vectorized histograms."""
+"""
+Numpy API for xhistogram.
+"""
+
 
 import numpy as np
 from functools import reduce
@@ -76,7 +79,7 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False, right=Fa
 
     Parameters
     ----------
-    a : array_like
+    args : array_like
         Input data. The histogram is computed over the specified axes.
     bins : array_like
         Bin edges. Must be specified explicitly. The size of the output
