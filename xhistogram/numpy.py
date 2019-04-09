@@ -1,48 +1,77 @@
 """Numpy functions for vectorized histograms."""
 
 import numpy as np
-from .duck_array_ops import digitize, bincount
+from functools import reduce
+from .duck_array_ops import digitize, bincount, ravel_multi_index
 
-def _histogram_2d_vectorized(a, bins, weights=None, density=False, right=False):
+
+def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
+    if len(bins) == N_expected:
+        return bins
+    elif N_expected==1:
+        return [bins]
+    else:
+        raise ValueError("Can't figure out what to do with bins.")
+
+
+def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, right=False):
     """Calculate the histogram independently on each row of a 2D array"""
-    assert a.ndim == 2
-    assert bins.ndim == 1
+
+    N_inputs = len(args)
+    bins = _ensure_bins_is_a_list_of_arrays(bins, N_inputs)
+    a0 = args[0]
+
+    # consistency checks for inputa
+    for a, b in zip(args, bins):
+        assert a.ndim == 2
+        assert b.ndim == 1
+        assert a.shape == a0.shape
     if weights is not None:
-        assert weights.shape == a.shape
+        assert weights.shape == a0.shape
         weights = weights.ravel()
 
-    nrows, ncols = a.shape
-    nbins = len(bins)
+    nrows, ncols = a0.shape
+    nbins = [len(b) for b in bins]
+    hist_shapes = [nb+1 for nb in nbins]
+    final_shape = (nrows,) + tuple(hist_shapes)
 
     # a marginally faster implementation would be to use searchsorted,
     # like numpy histogram itself does
     # https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L864-L882
     # for now we stick with `digitize` because it's easy to understand how it works
 
-    # the maximum possible value of of bin_indices is nbins
+    # the maximum possible value of of digitize is nbins
     # for right=False:
-    #   - 0 corresponds to a < bins[0]
-    #   - i corresponds to bins[i-1] <= a < bins[i]
-    #   - nbins corresponds to a a >= bins[1]
-    bin_indices = digitize(a, bins)
+    #   - 0 corresponds to a < b[0]
+    #   - i corresponds to bins[i-1] <= a < b[i]
+    #   - nbins corresponds to a a >= b[1]
+    each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
+    # product of the bins gives the joint distribution
+    if N_inputs > 1:
+        bin_indices = ravel_multi_index(each_bin_indices, hist_shapes)
+    else:
+        bin_indices = each_bin_indices[0]
+    # total number of unique bin indices
+    N = reduce(lambda x, y: x*y, hist_shapes)
 
     # now the tricks to apply bincount on an axis-by-axis basis
     # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
     # https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy
 
     M = nrows
-    N = nbins+1
     bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
     bc_offset = bincount(bin_indices_offset, weights=weights,
                             minlength=N*M)
-    bc_offset_reshape = bc_offset.reshape(M, -1)
+
+    bc_offset_reshape = bc_offset.reshape(final_shape)
 
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
-    return bc_offset_reshape[:, 1:-1]
+    slices = (slice(None),) + (N_inputs * (slice(1, -1),))
+    return bc_offset_reshape[slices]
 
 
-def histogram(a, bins, axis=None, weights=None, density=False, right=False):
+def histogram(*args, bins=None, axis=None, weights=None, density=False, right=False):
     """Histogram applied along specified axis / axes.
 
     Parameters
@@ -87,27 +116,43 @@ def histogram(a, bins, axis=None, weights=None, density=False, right=False):
         axis = np.atleast_1d(axis)
         assert axis.ndim == 1
 
-    keep_shape = axis is None or (len(axis) == a.ndim)
-    if keep_shape:
-        # should be the same thing
-        #f, _ = np.histogram(a, bins=bins, weights=weights, density=density)
-        d = a.ravel()[None, :]
+    a0 = args[0]
+    do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
+    if do_full_array:
+        kept_axes_shape = None
     else:
-        new_pos = tuple(range(-len(axis), 0))
-        c = np.moveaxis(a, axis, new_pos)
-        split_idx = c.ndim - len(axis)
-        dims_0 = c.shape[:split_idx]
-        dims_1 = c.shape[split_idx:]
-        new_dim_0 = np.prod(dims_0)
-        new_dim_1 = np.prod(dims_1)
-        d = np.reshape(c, (new_dim_0, new_dim_1))
-    e = _histogram_2d_vectorized(d, bins, weights=weights, density=density,
-                                 right=right)
+        kept_axes_shape = tuple([a0.shape[i]
+                                 for i in range(a0.ndim) if i not in axis])
 
-    if keep_shape:
-        f = e.squeeze()
+    def reshape_input(a):
+        if do_full_array:
+            # should be the same thing
+            #f, _ = np.histogram(a, bins=bins, weights=weights, density=density)
+            d = a.ravel()[None, :]
+        else:
+            new_pos = tuple(range(-len(axis), 0))
+            c = np.moveaxis(a, axis, new_pos)
+            split_idx = c.ndim - len(axis)
+            dims_0 = c.shape[:split_idx]
+            assert dims_0 == kept_axes_shape
+            dims_1 = c.shape[split_idx:]
+            new_dim_0 = np.prod(dims_0)
+            new_dim_1 = np.prod(dims_1)
+            d = np.reshape(c, (new_dim_0, new_dim_1))
+        return d
+
+    args_reshaped = [reshape_input(a) for a in args]
+    if weights is not None:
+        weights = reshape_input(weights)
+
+    h = _histogram_2d_vectorized(*args_reshaped, bins=bins, weights=weights,
+                                 density=density, right=right)
+
+    if h.shape[0] == 1:
+        assert do_full_array
+        h = h.squeeze()
     else:
-        final_shape = dims_0 + (-1,)
-        f = np.reshape(e, final_shape)
+        final_shape = kept_axes_shape + h.shape[1:]
+        h = np.reshape(h, final_shape)
 
-    return f
+    return h
