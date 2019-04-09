@@ -16,6 +16,10 @@ def test_histogram_results_1d():
     hist, _ = np.histogram(data, bins=bins)
     np.testing.assert_array_equal(hist, h2d.sum(axis=0))
 
+    # now try with no axis
+    h2d_na = histogram(data, bins=bins)
+    np.testing.assert_array_equal(hist, h2d_na)
+
     # check that weights works
     h2d_d = histogram(data, bins=bins, axis=1, weights=2*np.ones_like(data))
     np.testing.assert_array_equal(2*h2d, h2d_d)
