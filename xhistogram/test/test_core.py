@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..numpy import _histogram_2d_vectorized, histogram
+from ..core import histogram
 from itertools import combinations
 
 
