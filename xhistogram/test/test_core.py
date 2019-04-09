@@ -2,6 +2,9 @@ import numpy as np
 
 from ..core import histogram
 from itertools import combinations
+import dask.array as dsa
+
+import pytest
 
 
 def test_histogram_results_1d():
@@ -42,11 +45,14 @@ def test_histogram_results_2d():
     np.testing.assert_array_equal(hist, h)
 
 
-def test_histogram_shape():
+@pytest.mark.parametrize('use_dask', [False, True])
+def test_histogram_shape(use_dask):
     """These tests just verify that arrays with the right shape come out.
     They don't verify correctness."""
 
     b = np.random.randn(10, 15, 12, 20)
+    if use_dask:
+        b = dsa.from_array(b, chunks=(1, 15, 12, 20))
     bins = np.linspace(-4, 4, 27)
 
     # no axis
@@ -56,6 +62,8 @@ def test_histogram_shape():
     for axis in [(0, 1, 2, 3), (0, 1, 3, 2), (3, 2, 1, 0), (3, 2, 0, 1)]:
         c = histogram(b, bins=bins, axis=axis)
         assert c.shape == (len(bins) - 1,)
+        if use_dask:
+            assert isinstance(c, dsa.Array)
 
     # scalar axis
     for axis in range(4):
@@ -64,6 +72,8 @@ def test_histogram_shape():
         del shape[axis]
         expected_shape = tuple(shape) + (len(bins) - 1,)
         assert c.shape == expected_shape
+        if use_dask:
+            assert isinstance(c, dsa.Array)
 
     # two axes
     for i, j in combinations(range(4), 2):
@@ -77,3 +87,5 @@ def test_histogram_shape():
         print(c.shape)
         print(expected_shape)
         assert c.shape == expected_shape
+        if use_dask:
+            assert isinstance(c, dsa.Array)
