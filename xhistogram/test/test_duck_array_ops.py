@@ -1,7 +1,7 @@
 import numpy as np
 import dask
 import dask.array as dsa
-from ..duck_array_ops import digitize, bincount
+from ..duck_array_ops import digitize, bincount, ravel_multi_index
 import pytest
 
 def _empty_dask_array(shape, dtype=float, chunks=None):
@@ -26,7 +26,8 @@ def test_eager(function, args):
 
 @pytest.mark.parametrize('function, args, kwargs', [
     (digitize, [_empty_dask_array((5, 12)), np.linspace(0, 1, 7)], {}),
-    (bincount, [_empty_dask_array((10,))], {'minlength': 5})
+    (bincount, [_empty_dask_array((10,))], {'minlength': 5}),
+    (ravel_multi_index, (_empty_dask_array((10,)), _empty_dask_array((10,))), {})
 ])
 def test_lazy(function, args, kwargs):
     # make sure nothing computes
@@ -42,3 +43,13 @@ def test_digitize_dask_correct(chunks):
     d = digitize(a, bins)
     dd = digitize(da, bins)
     np.testing.assert_array_equal(d, dd.compute())
+
+def test_ravel_multi_index_correct():
+    arr = np.array([[3,6,6],[4,5,1]])
+    expected = np.ravel_multi_index(arr, (7,6))
+    actual = ravel_multi_index(arr, (7,6))
+    np.testing.assert_array_equal(expected, actual)
+
+    expected = np.ravel_multi_index(arr, (7,6), order='F')
+    actual = ravel_multi_index(arr, (7,6), order='F')
+    np.testing.assert_array_equal(expected, actual)

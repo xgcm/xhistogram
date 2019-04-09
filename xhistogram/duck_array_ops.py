@@ -2,6 +2,7 @@
 Shamelessly copied from xarray."""
 
 import numpy as np
+from functools import reduce
 
 try:
     import dask.array as dsa
@@ -30,3 +31,22 @@ def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
 
 digitize = _dask_or_eager_func('digitize')
 bincount = _dask_or_eager_func('bincount')
+
+# dask doesn't yet have this
+# https://github.com/dask/dask/issues/2557
+# ravel_multi_index = _dask_or_eager_func('ravel_multi_index')
+def ravel_multi_index(multi_index, dims, order='C'):
+    # poor clone of the numpy function
+    # https://docs.scipy.org/doc/numpy/reference/generated/numpy.ravel_multi_index.html
+    # but written in a dask-friendly way
+    # implementation is from this: https://stackoverflow.com/a/20266350/3266235
+
+    assert len(multi_index) == len(dims)
+    if order=='C':
+        offset_factors = [reduce(lambda x, y: x*y, dims[n:])
+                          for n in range(1, len(dims))] + [1,]
+    elif order=='F':
+        offset_factors = [1,] + [reduce(lambda x, y: x*y, dims[:n])
+                                 for n in range(1, len(dims))]
+    full_index = [of * ix for of, ix in zip(offset_factors, multi_index)]
+    return sum(full_index)
