@@ -1,8 +1,10 @@
 import numpy as np
 
-from ..core import histogram
 from itertools import combinations
 import dask.array as dsa
+
+from ..core import histogram
+from .fixtures import empty_dask_array
 
 import pytest
 
@@ -50,9 +52,11 @@ def test_histogram_shape(use_dask):
     """These tests just verify that arrays with the right shape come out.
     They don't verify correctness."""
 
-    b = np.random.randn(10, 15, 12, 20)
+    shape = 10, 15, 12, 20
     if use_dask:
-        b = dsa.from_array(b, chunks=(1, 15, 12, 20))
+        b = empty_dask_array(shape, chunks=(1,) + shape[1:])
+    else:
+        b = np.random.randn(*shape)
     bins = np.linspace(-4, 4, 27)
 
     # no axis
