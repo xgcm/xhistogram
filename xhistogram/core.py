@@ -5,7 +5,8 @@ Numpy API for xhistogram.
 
 import numpy as np
 from functools import reduce
-from .duck_array_ops import digitize, bincount, reshape, ravel_multi_index
+from .duck_array_ops import (digitize, bincount, reshape, ravel_multi_index,
+    concatenate)
 
 
 def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
@@ -17,7 +18,7 @@ def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
         raise ValueError("Can't figure out what to do with bins.")
 
 
-def _bincount_2d(bin_indices, weights, N, final_shape):
+def _bincount_2d(bin_indices, weights, N, hist_shapes):
     # a trick to apply bincount on an axis-by-axis basis
     # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
     # https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy
@@ -25,7 +26,17 @@ def _bincount_2d(bin_indices, weights, N, final_shape):
     bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
     bc_offset = bincount(bin_indices_offset, weights=weights,
                             minlength=N*M)
+    final_shape = (M,) + tuple(hist_shapes)
     return bc_offset.reshape(final_shape)
+
+
+def _bincount_loop(bin_indices, weights, N, hist_shapes):
+    # just a loop, but it is dask friendly
+    counts = [bincount(b, weights, minlength=N)[None, :]
+              for b in bin_indices]
+    all_counts = concatenate(counts)
+    final_shape = (bin_indices.shape[0],) + tuple(hist_shapes)
+    return all_counts.reshape(final_shape)
 
 
 def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, right=False):
@@ -47,7 +58,6 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     nrows, ncols = a0.shape
     nbins = [len(b) for b in bins]
     hist_shapes = [nb+1 for nb in nbins]
-    final_shape = (nrows,) + tuple(hist_shapes)
 
     # a marginally faster implementation would be to use searchsorted,
     # like numpy histogram itself does
@@ -68,7 +78,7 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     # total number of unique bin indices
     N = reduce(lambda x, y: x*y, hist_shapes)
 
-    bin_counts = _bincount_2d(bin_indices, weights, N, final_shape)
+    bin_counts = _bincount_2d(bin_indices, weights, N, hist_shapes)
 
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
