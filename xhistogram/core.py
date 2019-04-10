@@ -17,6 +17,17 @@ def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
         raise ValueError("Can't figure out what to do with bins.")
 
 
+def _bincount_2d(bin_indices, weights, N, final_shape):
+    # a trick to apply bincount on an axis-by-axis basis
+    # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
+    # https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy
+    M = bin_indices.shape[0]
+    bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
+    bc_offset = bincount(bin_indices_offset, weights=weights,
+                            minlength=N*M)
+    return bc_offset.reshape(final_shape)
+
+
 def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, right=False):
     """Calculate the histogram independently on each row of a 2D array"""
 
@@ -57,21 +68,12 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     # total number of unique bin indices
     N = reduce(lambda x, y: x*y, hist_shapes)
 
-    # now the tricks to apply bincount on an axis-by-axis basis
-    # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
-    # https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy
-
-    M = nrows
-    bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
-    bc_offset = bincount(bin_indices_offset, weights=weights,
-                            minlength=N*M)
-
-    bc_offset_reshape = bc_offset.reshape(final_shape)
+    bin_counts = _bincount_2d(bin_indices, weights, N, final_shape)
 
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
     slices = (slice(None),) + (N_inputs * (slice(1, -1),))
-    return bc_offset_reshape[slices]
+    return bin_counts[slices]
 
 
 def histogram(*args, bins=None, axis=None, weights=None, density=False, right=False):
