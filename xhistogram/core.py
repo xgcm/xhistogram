@@ -1,8 +1,11 @@
-"""Numpy functions for vectorized histograms."""
+"""
+Numpy API for xhistogram.
+"""
+
 
 import numpy as np
 from functools import reduce
-from .duck_array_ops import digitize, bincount, ravel_multi_index
+from .duck_array_ops import digitize, bincount, reshape, ravel_multi_index
 
 
 def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
@@ -76,7 +79,7 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False, right=Fa
 
     Parameters
     ----------
-    a : array_like
+    args : array_like
         Input data. The histogram is computed over the specified axes.
     bins : array_like
         Bin edges. Must be specified explicitly. The size of the output
@@ -138,7 +141,7 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False, right=Fa
             dims_1 = c.shape[split_idx:]
             new_dim_0 = np.prod(dims_0)
             new_dim_1 = np.prod(dims_1)
-            d = np.reshape(c, (new_dim_0, new_dim_1))
+            d = reshape(c, (new_dim_0, new_dim_1))
         return d
 
     args_reshaped = [reshape_input(a) for a in args]
@@ -153,6 +156,6 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False, right=Fa
         h = h.squeeze()
     else:
         final_shape = kept_axes_shape + h.shape[1:]
-        h = np.reshape(h, final_shape)
+        h = reshape(h, final_shape)
 
     return h

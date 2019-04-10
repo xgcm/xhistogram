@@ -1,19 +1,11 @@
 import numpy as np
 import dask
 import dask.array as dsa
-from ..duck_array_ops import digitize, bincount, ravel_multi_index
+from ..duck_array_ops import digitize, bincount, reshape, ravel_multi_index
+from .fixtures import empty_dask_array
 import pytest
 
-def _empty_dask_array(shape, dtype=float, chunks=None):
-    # a dask array that errors if you try to comput it
-    def raise_if_computed():
-        raise ValueError('Triggered forbidden computation')
 
-    a = dsa.from_delayed(dask.delayed(raise_if_computed)(), shape, dtype)
-    if chunks is not None:
-        a = a.rechunk(chunks)
-
-    return a
 
 @pytest.mark.parametrize('function, args', [
     (digitize, [np.random.rand(5, 12), np.linspace(0, 1, 7)]),
@@ -25,9 +17,10 @@ def test_eager(function, args):
 
 
 @pytest.mark.parametrize('function, args, kwargs', [
-    (digitize, [_empty_dask_array((5, 12)), np.linspace(0, 1, 7)], {}),
-    (bincount, [_empty_dask_array((10,))], {'minlength': 5}),
-    (ravel_multi_index, (_empty_dask_array((10,)), _empty_dask_array((10,))), {})
+    (digitize, [empty_dask_array((5, 12)), np.linspace(0, 1, 7)], {}),
+    (bincount, [empty_dask_array((10,))], {'minlength': 5}),
+    (reshape, [empty_dask_array((10, 5)), (5, 10)], {}),
+    (ravel_multi_index, (empty_dask_array((10,)), empty_dask_array((10,))), {})
 ])
 def test_lazy(function, args, kwargs):
     # make sure nothing computes
@@ -43,7 +36,7 @@ def test_digitize_dask_correct(chunks):
     d = digitize(a, bins)
     dd = digitize(da, bins)
     np.testing.assert_array_equal(d, dd.compute())
-    
+
 
 def test_ravel_multi_index_correct():
     arr = np.array([[3,6,6],[4,5,1]])
