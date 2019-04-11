@@ -25,7 +25,7 @@ def test_histogram_results_1d(block_size):
     # now try with no axis
     h_na = histogram(data, bins=bins, block_size=block_size)
     np.testing.assert_array_equal(hist, h_na)
-    
+
 
 @pytest.mark.parametrize('block_size', [None, 1, 2])
 def test_histogram_results_1d_weighted(block_size):
@@ -55,8 +55,9 @@ def test_histogram_results_2d():
     np.testing.assert_array_equal(hist, h)
 
 
+@pytest.mark.parametrize('block_size', [None, 5])
 @pytest.mark.parametrize('use_dask', [False, True])
-def test_histogram_shape(use_dask):
+def test_histogram_shape(use_dask, block_size):
     """These tests just verify that arrays with the right shape come out.
     They don't verify correctness."""
 
@@ -68,7 +69,7 @@ def test_histogram_shape(use_dask):
     bins = np.linspace(-4, 4, 27)
 
     # no axis
-    c = histogram(b, bins=bins)
+    c = histogram(b, bins=bins, block_size=block_size)
     assert c.shape == (len(bins) - 1,)
     # same thing
     for axis in [(0, 1, 2, 3), (0, 1, 3, 2), (3, 2, 1, 0), (3, 2, 0, 1)]:
@@ -79,7 +80,7 @@ def test_histogram_shape(use_dask):
 
     # scalar axis
     for axis in range(4):
-        c = histogram(b, bins=bins, axis=axis)
+        c = histogram(b, bins=bins, axis=axis, block_size=block_size)
         shape = list(b.shape)
         del shape[axis]
         expected_shape = tuple(shape) + (len(bins) - 1,)
@@ -92,7 +93,7 @@ def test_histogram_shape(use_dask):
         print(b.shape)
         axis = (i, j)
         print(axis)
-        c = histogram(b, bins=bins, axis=axis)
+        c = histogram(b, bins=bins, axis=axis, block_size=block_size)
         shape = list(b.shape)
         partial_shape = [shape[k] for k in range(b.ndim) if k not in axis]
         expected_shape = tuple(partial_shape) + (len(bins) - 1,)
