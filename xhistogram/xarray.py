@@ -8,7 +8,7 @@ from .core import histogram as _histogram
 
 
 def histogram(*args, bins=None, dims=None, weights=None, density=False,
-              right=False, bin_dim_suffix='_bin'):
+              right=False, block_size=None, bin_dim_suffix='_bin'):
     """Histogram applied along specified dimensions.
 
     Parameters
@@ -87,8 +87,9 @@ def histogram(*args, bins=None, dims=None, weights=None, density=False,
     new_coords = {name: ((name,), bin_center, a.attrs)
                   for name, bin_center, a in zip(new_dims, bin_centers, args)}
 
+    histogram_kwargs = dict(bins=bins, axis=axis, block_size=block_size)
     res = xr.apply_ufunc(_histogram, *args,
-                         kwargs=dict(bins=bins, axis=axis),
+                         kwargs=histogram_kwargs,
                          input_core_dims=input_core_dims,
                          output_core_dims=[new_dims],
                          vectorize=False,

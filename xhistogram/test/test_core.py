@@ -9,12 +9,13 @@ from .fixtures import empty_dask_array
 import pytest
 
 
-def test_histogram_results_1d():
+@pytest.mark.parametrize('block_size', [None, 1, 2])
+def test_histogram_results_1d(block_size):
     nrows, ncols = 5, 20
     data = np.random.randn(nrows, ncols)
     bins = np.linspace(-4, 4, 10)
 
-    h = histogram(data, bins=bins, axis=1)
+    h = histogram(data, bins=bins, axis=1, block_size=block_size)
     assert h.shape == (nrows, len(bins)-1)
 
     # make sure we get the same thing as histogram
@@ -22,12 +23,19 @@ def test_histogram_results_1d():
     np.testing.assert_array_equal(hist, h.sum(axis=0))
 
     # now try with no axis
-    h_na = histogram(data, bins=bins)
+    h_na = histogram(data, bins=bins, block_size=block_size)
     np.testing.assert_array_equal(hist, h_na)
+    
 
-    # check that weights works
-    h_d = histogram(data, bins=bins, axis=1, weights=2*np.ones_like(data))
-    np.testing.assert_array_equal(2*h, h_d)
+@pytest.mark.parametrize('block_size', [None, 1, 2])
+def test_histogram_results_1d_weighted(block_size):
+    nrows, ncols = 5, 20
+    data = np.random.randn(nrows, ncols)
+    bins = np.linspace(-4, 4, 10)
+    h = histogram(data, bins=bins, axis=1, block_size=block_size)
+    h_w = histogram(data, bins=bins, axis=1, weights=2*np.ones_like(data),
+                    block_size=block_size)
+    np.testing.assert_array_equal(2*h, h_w)
 
 
 def test_histogram_results_2d():

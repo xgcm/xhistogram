@@ -23,6 +23,8 @@ def _bincount_2d(bin_indices, weights, N, hist_shapes):
     # https://stackoverflow.com/questions/40591754/vectorizing-numpy-bincount
     # https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy
     M = bin_indices.shape[0]
+    if weights is not None:
+        weights = weights.ravel()
     bin_indices_offset = (bin_indices + (N * np.arange(M)[:, None])).ravel()
     bc_offset = bincount(bin_indices_offset, weights=weights,
                             minlength=N*M)
@@ -30,16 +32,29 @@ def _bincount_2d(bin_indices, weights, N, hist_shapes):
     return bc_offset.reshape(final_shape)
 
 
-def _bincount_loop(bin_indices, weights, N, hist_shapes):
-    # just a loop, but it is dask friendly
-    counts = [bincount(b, weights, minlength=N)[None, :]
-              for b in bin_indices]
-    all_counts = concatenate(counts)
+def _bincount_loop(bin_indices, weights, N, hist_shapes, block_size):
+    M = bin_indices.shape[0]
+    block_counts = []
+    for m_start in range(0, M, block_size):
+        m_end = min(m_start + block_size, M)
+        bin_indices_block = bin_indices[m_start:m_end]
+        weights_block = weights[m_start:m_end] if weights is not None else None
+        bc_block = _bincount_2d(bin_indices_block, weights_block, N, hist_shapes)
+        block_counts.append(bc_block)
+    all_counts = concatenate(block_counts)
     final_shape = (bin_indices.shape[0],) + tuple(hist_shapes)
     return all_counts.reshape(final_shape)
 
 
-def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, right=False):
+def _dispatch_bincount(bin_indices, weights, N, hist_shapes, block_size=None):
+    if block_size is None:
+        return _bincount_2d(bin_indices, weights, N, hist_shapes)
+    else:
+        return _bincount_loop(bin_indices, weights, N, hist_shapes, block_size)
+
+
+def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
+                             right=False, block_size=None):
     """Calculate the histogram independently on each row of a 2D array"""
 
     N_inputs = len(args)
@@ -53,7 +68,7 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
         assert a.shape == a0.shape
     if weights is not None:
         assert weights.shape == a0.shape
-        weights = weights.ravel()
+        #weights = weights.ravel()
 
     nrows, ncols = a0.shape
     nbins = [len(b) for b in bins]
@@ -78,7 +93,8 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     # total number of unique bin indices
     N = reduce(lambda x, y: x*y, hist_shapes)
 
-    bin_counts = _bincount_2d(bin_indices, weights, N, hist_shapes)
+    bin_counts = _dispatch_bincount(bin_indices, weights, N, hist_shapes,
+                                    block_size=block_size)
 
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
@@ -86,7 +102,8 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False, righ
     return bin_counts[slices]
 
 
-def histogram(*args, bins=None, axis=None, weights=None, density=False, right=False):
+def histogram(*args, bins=None, axis=None, weights=None, density=False,
+              right=False, block_size=None):
     """Histogram applied along specified axis / axes.
 
     Parameters
@@ -161,7 +178,8 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False, right=Fa
         weights = reshape_input(weights)
 
     h = _histogram_2d_vectorized(*args_reshaped, bins=bins, weights=weights,
-                                 density=density, right=right)
+                                 density=density, right=right,
+                                 block_size=block_size)
 
     if h.shape[0] == 1:
         assert do_full_array
