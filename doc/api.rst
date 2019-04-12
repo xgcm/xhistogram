@@ -1,8 +1,14 @@
 API
 ###
 
-Numpy Module
-============
+Core Module
+===========
 
-.. automodule:: xhistogram.numpy
+.. automodule:: xhistogram.core
+  :members:
+
+Xarray Module
+=============
+
+.. automodule:: xhistogram.xarray
   :members:
