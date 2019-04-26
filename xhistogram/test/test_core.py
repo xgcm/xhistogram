@@ -78,8 +78,8 @@ def test_histogram_shape(use_dask, block_size):
         if use_dask:
             assert isinstance(c, dsa.Array)
 
-    # scalar axis
-    for axis in range(4):
+    # scalar axis (check positive and negative)
+    for axis in list(range(4)) + list(range(-1, -5, -1)):
         c = histogram(b, bins=bins, axis=axis, block_size=block_size)
         shape = list(b.shape)
         del shape[axis]
@@ -90,15 +90,11 @@ def test_histogram_shape(use_dask, block_size):
 
     # two axes
     for i, j in combinations(range(4), 2):
-        print(b.shape)
         axis = (i, j)
-        print(axis)
         c = histogram(b, bins=bins, axis=axis, block_size=block_size)
         shape = list(b.shape)
         partial_shape = [shape[k] for k in range(b.ndim) if k not in axis]
         expected_shape = tuple(partial_shape) + (len(bins) - 1,)
-        print(c.shape)
-        print(expected_shape)
         assert c.shape == expected_shape
         if use_dask:
             assert isinstance(c, dsa.Array)

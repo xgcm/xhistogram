@@ -1,5 +1,56 @@
 import xarray as xr
 import numpy as np
 import pytest
+import pandas as pd
+from functools import reduce
+from itertools import combinations
 
 from ..xarray import histogram
+
+
+# example dimensions
+DIMS = {'time': 5, 'depth': 10, 'lat': 45, 'lon': 90}
+COORDS = {'time': ('time', pd.date_range(start='2000-01-01', periods=DIMS['time'])),
+          'depth': ('depth', np.arange(DIMS['depth']) * 100. + 50),
+          'lat': ('lat', np.arange(DIMS['lat']) * 180/DIMS['lat'] - 90 + 90/DIMS['lat']),
+          'lon': ('lon', np.arange(DIMS['lon']) * 360/DIMS['lon'] + 180/DIMS['lon'])
+          }
+
+
+@pytest.fixture(params=[('lon',),
+                        ('lat', 'lon'),
+                        ('depth', 'lat', 'lon'),
+                        ('time', 'depth', 'lat', 'lon')],
+                ids=['1D', '2D', '3D', '4D'])
+def ones(request):
+    dims = request.param
+    shape = [DIMS[d] for d in dims]
+    coords = {k: v for k, v in COORDS.items() if k in dims}
+    data = np.ones(shape, dtype='f8')
+    da = xr.DataArray(data, dims=dims, coords=coords, name='ones')
+    return da
+
+@pytest.mark.parametrize('ndims', [1, 2, 3, 4])
+def test_histogram_ones(ones, ndims):
+    dims = ones.dims
+    if ones.ndim > ndims:
+        pytest.skip("Don't need to test when number of dimension combinations "
+                    "exceeds the number of array dimensions")
+
+    # everything should be in the middle bin (index 1)
+    bins = np.array([0, 0.9, 1.1, 2])
+    bins_c = 0.5 * (bins[1:] + bins[:-1])
+
+    def _check_result(h, d):
+        other_dims = [dim for dim in ones.dims if dim != d]
+        assert other_dims in h
+        # check that all values are in the central bin
+        h_sum = h.sum(other_dims)
+        h_sum_expected = xr.DataArray([0, ones.size, 0],
+                                      dims=['ones_bin'],
+                                      coords={'ones_bin': ('ones_bin', bins_c)},
+                                      name='histogram')
+        xr.testing.assert_identical(h_sum, h_sum_expected)
+
+    for d in combinations(dims, ndims):
+        h = histogram(ones, bins=[bins], dim=d)

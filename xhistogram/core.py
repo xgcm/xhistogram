@@ -103,16 +103,29 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
 
 
 def histogram(*args, bins=None, axis=None, weights=None, density=False,
-              right=False, block_size=None):
+              block_size=None):
     """Histogram applied along specified axis / axes.
 
     Parameters
     ----------
     args : array_like
-        Input data. The histogram is computed over the specified axes.
-    bins : array_like
-        Bin edges. Must be specified explicitly. The size of the output
-        dimension will be ``len(bins) - 1``.
+        Input data. The number of input arguments determines the dimensonality
+        of the histogram. For example, two arguments prodocue a 2D histogram.
+        All args must have the same size.
+    bins :  int or array_like or a list of ints or arrays, optional
+        If a list, there should be one entry for each item in ``args``.
+        The bin specification:
+
+          * If int, the number of bins for all arguments in ``args``.
+          * If array_like, the bin edges for all arguments in ``args``.
+          * If a list of ints, the number of bins  for every argument in ``args``.
+          * If a list arrays, the bin edges for each argument in ``args``
+            (required format for Dask inputs).
+          * A combination [int, array] or [array, int], where int
+            is the number of bins and array is the bin edges.
+
+        A ``TypeError`` will be raised if ``args`` contains dask arrays and
+        ``bins`` are not specified explicitly as a list of arrays.
     axis : None or int or tuple of ints, optional
         Axis or axes along which the histogram is computed. The default is to
         compute the histogram of the flattened array
@@ -129,10 +142,11 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
         the *integral* over the range is 1. Note that the sum of the
         histogram values will not be equal to 1 unless bins of unity
         width are chosen; it is not a probability *mass* function.
-    right : bool, optional
-        Indicating whether the intervals include the right or the left bin
-        edge. Default behavior is (right==False) indicating that the interval
-        does not include the right edge.
+    block_size : int, optional
+        A parameter which governs the algorithm used to compute the histogram.
+        Using a nonzero value splits the histogram calculation over the
+        non-histogram axes into blocks of size ``block_size``, iterating over
+        them with a loop (numpy inputs) or in parallel (dask inputs).
 
     Returns
     -------
@@ -144,11 +158,22 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
     bincount, histogram, digitize
     """
 
+    a0 = args[0]
+    ndim = a0.ndim
+
     if axis is not None:
         axis = np.atleast_1d(axis)
         assert axis.ndim == 1
+        axis_normed = []
+        for ax in axis:
+            if ax >= 0:
+                ax_positive = ax
+            else:
+                ax_positive = ndim + ax
+            assert ax_positive < ndim, 'axis must be less than ndim'
+            axis_normed.append(ax_positive)
+        axis =  np.atleast_1d(axis_normed)
 
-    a0 = args[0]
     do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
     if do_full_array:
         kept_axes_shape = None
@@ -178,8 +203,7 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
         weights = reshape_input(weights)
 
     h = _histogram_2d_vectorized(*args_reshaped, bins=bins, weights=weights,
-                                 density=density, right=right,
-                                 block_size=block_size)
+                                 density=density, block_size=block_size)
 
     if h.shape[0] == 1:
         assert do_full_array
