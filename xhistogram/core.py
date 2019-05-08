@@ -67,8 +67,8 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
         assert b.ndim == 1
         assert a.shape == a0.shape
     if weights is not None:
-        assert weights.shape == a0.shape
-        #weights = weights.ravel()
+        #assert weights.shape == a0.shape
+        pass
 
     nrows, ncols = a0.shape
     nbins = [len(b) for b in bins]
@@ -183,10 +183,11 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
 
     def reshape_input(a):
         if do_full_array:
-            # should be the same thing
-            #f, _ = np.histogram(a, bins=bins, weights=weights, density=density)
             d = a.ravel()[None, :]
         else:
+            # reshape the array to 2D
+            # axis 0: preserved axis after histogram
+            # axis 1: calculate histogram along this axis
             new_pos = tuple(range(-len(axis), 0))
             c = np.moveaxis(a, axis, new_pos)
             split_idx = c.ndim - len(axis)

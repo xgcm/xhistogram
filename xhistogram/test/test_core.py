@@ -33,9 +33,27 @@ def test_histogram_results_1d_weighted(block_size):
     data = np.random.randn(nrows, ncols)
     bins = np.linspace(-4, 4, 10)
     h = histogram(data, bins=bins, axis=1, block_size=block_size)
-    h_w = histogram(data, bins=bins, axis=1, weights=2*np.ones_like(data),
+    weights = 2*np.ones_like(data)
+    h_w = histogram(data, bins=bins, axis=1, weights=weights,
                     block_size=block_size)
     np.testing.assert_array_equal(2*h, h_w)
+
+    # try with array broadcasting - does it work? not yet
+    # with this shape, the weight is constant for each histogram but different
+    # for each entry along axis 0
+    weights = 2*np.ones((nrows, 1))
+    h_w = histogram(data, bins=bins, axis=1, weights=weights,
+                    block_size=block_size)
+    np.testing.assert_array_equal(2*h, h_w)
+
+    # try with array broadcasting - does it work? not yet
+    # with this shape, the weight is different for each histogram but constant
+    # for each entry along axis 0
+    weights = 2*np.ones((1, ncols))
+    h_w = histogram(data, bins=bins, axis=1, weights=weights,
+                    block_size=block_size)
+    np.testing.assert_array_equal(2*h, h_w)
+
 
 
 def test_histogram_results_2d():
