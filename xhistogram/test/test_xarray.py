@@ -69,10 +69,25 @@ def test_weights(ones, ndims):
     bins = np.array([0, 0.9, 1.1, 2])
     bins_c = 0.5 * (bins[1:] + bins[:-1])
 
+    weight_value = 0.5
+
+    def _check_result(h, d):
+        other_dims = [dim for dim in ones.dims if dim not in d]
+        if len(other_dims) > 0:
+            assert other_dims in h
+        # check that all values are in the central bin
+        h_sum = h.sum(other_dims)
+        h_sum_expected = xr.DataArray([0, ones.size * weight_value, 0],
+                                      dims=['ones_bin'],
+                                      coords={'ones_bin': ('ones_bin', bins_c)},
+                                      name='histogram')
+        xr.testing.assert_identical(h_sum, h_sum_expected)
+
     # get every possible combination of sub-dimensions
     for n_combinations in range(ones.ndim):
         for weight_dims in combinations(dims, n_combinations):
             i_selector = {dim: 0 for dim in weight_dims}
-            weights = xr.full_like(ones.isel(**i_selector), 0.5)
+            weights = xr.full_like(ones.isel(**i_selector), weight_value)
             for d in combinations(dims, ndims):
                 h = histogram(ones, weights=weights, bins=[bins], dim=d)
+                _check_result(h, d)
