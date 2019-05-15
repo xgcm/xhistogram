@@ -30,6 +30,7 @@ def ones(request):
     da = xr.DataArray(data, dims=dims, coords=coords, name='ones')
     return da
 
+
 @pytest.mark.parametrize('ndims', [1, 2, 3, 4])
 def test_histogram_ones(ones, ndims):
     dims = ones.dims
@@ -42,8 +43,9 @@ def test_histogram_ones(ones, ndims):
     bins_c = 0.5 * (bins[1:] + bins[:-1])
 
     def _check_result(h, d):
-        other_dims = [dim for dim in ones.dims if dim != d]
-        assert other_dims in h
+        other_dims = [dim for dim in ones.dims if dim not in d]
+        if len(other_dims) > 0:
+            assert other_dims in h
         # check that all values are in the central bin
         h_sum = h.sum(other_dims)
         h_sum_expected = xr.DataArray([0, ones.size, 0],
@@ -54,3 +56,23 @@ def test_histogram_ones(ones, ndims):
 
     for d in combinations(dims, ndims):
         h = histogram(ones, bins=[bins], dim=d)
+        _check_result(h, d)
+
+
+@pytest.mark.parametrize('ndims', [1, 2, 3, 4])
+def test_weights(ones, ndims):
+    dims = ones.dims
+    if ones.ndim > ndims:
+        pytest.skip("Don't need to test when number of dimension combinations "
+                    "exceeds the number of array dimensions")
+
+    bins = np.array([0, 0.9, 1.1, 2])
+    bins_c = 0.5 * (bins[1:] + bins[:-1])
+
+    # get every possible combination of sub-dimensions
+    for n_combinations in range(ones.ndim):
+        for weight_dims in combinations(dims, n_combinations):
+            i_selector = {dim: 0 for dim in weight_dims}
+            weights = xr.full_like(ones.isel(**i_selector), 0.5)
+            for d in combinations(dims, ndims):
+                h = histogram(ones, weights=weights, bins=[bins], dim=d)

@@ -38,14 +38,13 @@ def test_histogram_results_1d_weighted(block_size):
                     block_size=block_size)
     np.testing.assert_array_equal(2*h, h_w)
 
-    # try with array broadcasting - does it work? not yet
-    # with this shape, the weight is constant for each histogram but different
-    # for each entry along axis 0
-    weights = 2*np.ones((nrows, 1))
-    h_w = histogram(data, bins=bins, axis=1, weights=weights,
-                    block_size=block_size)
-    np.testing.assert_array_equal(2*h, h_w)
 
+@pytest.mark.skip(reason="Weight broadcasting on numpy arrays is not yet implemented")
+@pytest.mark.parametrize('block_size', [None, 1, 2])
+def test_histogram_results_1d_weighted_broadcasting(block_size):
+    nrows, ncols = 5, 20
+    data = np.random.randn(nrows, ncols)
+    bins = np.linspace(-4, 4, 10)
     # try with array broadcasting - does it work? not yet
     # with this shape, the weight is different for each histogram but constant
     # for each entry along axis 0

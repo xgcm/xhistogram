@@ -67,8 +67,7 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
         assert b.ndim == 1
         assert a.shape == a0.shape
     if weights is not None:
-        #assert weights.shape == a0.shape
-        pass
+        assert weights.shape == a0.shape
 
     nrows, ncols = a0.shape
     nbins = [len(b) for b in bins]
