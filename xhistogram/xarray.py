@@ -71,9 +71,13 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
     # we drop coords to simplify alignment
     args = [da.reset_coords(drop=True) for da in args]
+    if weights is not None:
+        args += [weights]
     # explicitly align just so we understand what is going into apply_ufunc
     # (apply_ufunc might be doing this by itself again)
     args = xr.align(*args, join='exact')
+    if weights is not None:
+        weights = args.pop()
     a0 = args[0]
     a_dims = a0.dims
 
