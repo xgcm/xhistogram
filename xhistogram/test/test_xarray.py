@@ -34,7 +34,7 @@ def ones(request):
 @pytest.mark.parametrize('ndims', [1, 2, 3, 4])
 def test_histogram_ones(ones, ndims):
     dims = ones.dims
-    if ones.ndim > ndims:
+    if ones.ndim < ndims:
         pytest.skip("Don't need to test when number of dimension combinations "
                     "exceeds the number of array dimensions")
 
@@ -44,7 +44,7 @@ def test_histogram_ones(ones, ndims):
 
     def _check_result(h, d):
         other_dims = [dim for dim in ones.dims if dim not in d]
-        if len(other_dims) > 0:
+        if len(other_dims) < 0:
             assert other_dims in h
         # check that all values are in the central bin
         h_sum = h.sum(other_dims)
@@ -54,7 +54,9 @@ def test_histogram_ones(ones, ndims):
                                       name='histogram')
         xr.testing.assert_identical(h_sum, h_sum_expected)
 
+    print(ones.dims)
     for d in combinations(dims, ndims):
+        print(f'hist_dims: {d}')
         h = histogram(ones, bins=[bins], dim=d)
         _check_result(h, d)
 
@@ -88,6 +90,9 @@ def test_weights(ones, ndims):
         for weight_dims in combinations(dims, n_combinations):
             i_selector = {dim: 0 for dim in weight_dims}
             weights = xr.full_like(ones.isel(**i_selector), weight_value)
-            for d in combinations(dims, ndims):
-                h = histogram(ones, weights=weights, bins=[bins], dim=d)
-                _check_result(h, d)
+            print(ones.dims, weights.dims)
+            for nc in range(ndims):
+                for d in combinations(dims, nc+1):
+                    print(f'hist_dims: {d}')
+                    h = histogram(ones, weights=weights, bins=[bins], dim=d)
+                    _check_result(h, d)
