@@ -237,10 +237,6 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
 
     all_args_reshaped = [reshape_input(a) for a in all_args_broadcast]
 
-    print('block_size', block_size)
-    for a in all_args_reshaped:
-        print(type(a), a.shape, getattr(a, 'chunks', None))
-
     if weights is not None:
         weights_reshaped = all_args_reshaped.pop()
     else:
