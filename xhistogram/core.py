@@ -180,6 +180,9 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
         kept_axes_shape = tuple([a0.shape[i]
                                  for i in range(a0.ndim) if i not in axis])
 
+    args_and_weights = list(args) + [weights]
+    args_and_weights_broadcast = _broadcast_arrays(*args_and_weights)
+
     def reshape_input(a):
         if do_full_array:
             d = a.ravel()[None, :]

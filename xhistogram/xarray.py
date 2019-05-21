@@ -62,6 +62,7 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     """
 
     N_args = len(args)
+
     # TODO: allow list of weights as well
     N_weights = 1 if weights is not None else 0
 
@@ -71,40 +72,63 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     for bin in bins:
         assert isinstance(bin, np.ndarray), 'all bins must be numpy arrays'
 
-    # we drop coords to simplify alignment
-    args = [da.reset_coords(drop=True) for da in args]
-    # we put weights into the args list so it can pass through all the same
-    # alignment and broadcasting
-    if N_weights:
-        args += [weights.reset_coords(drop=True)]
-    # explicitly broadcast so we understand what is going into apply_ufunc
-    # (apply_ufunc might be doing this by itself again)
-    args = xr.align(*args, join='exact')
-    args = list(xr.broadcast(*args))
-    a0 = args[0]
-    a_dims = a0.dims
-
-    if dim is not None:
-        dims_to_keep = [d for d in a_dims if d not in dim]
-        input_core_dims = (N_args + N_weights)*(dim,)
-        # "Core dimensions are assumed to appear as the last dimensions of each
-        # output in the provided order." - xarray docs
-        # Therefore, we need to tell xhistogram to operate on the final axes
-        axis = tuple(range(-1, -len(dim) - 1, -1))
-    else:
-        axis = None
-        dims_to_keep = []
-        input_core_dims = (N_args + N_weights)*(a0.dims,)
-
     for a in args:
         # TODO: make this a more robust check
         assert a.name is not None, 'all arrays must have a name'
 
+    # we drop coords to simplify alignment
+    args = [da.reset_coords(drop=True) for da in args]
+    if N_weights:
+        args += [weights.reset_coords(drop=True)]
+    # explicitly broadcast so we understand what is going into apply_ufunc
+    # (apply_ufunc might be doing this by itself again)
+    args = list(xr.align(*args, join='exact'))
+
+
+
+    # what happens if we skip this?
+    #args = list(xr.broadcast(*args))
+    a0 = args[0]
+    a_dims = a0.dims
+
+    # roll our own broadcasting
+    # now manually expand the arrays
+    all_dims = set([d for a in a for d in arg.dims])
+    all_dims_ordered = list(all_dims)
+    args_expanded = []
+    for a in args:
+        a_expanded = a.expand_dims(all_dims - set(a.dims))
+        args_expanded.append(a_expanded)
+
+    # only transpose if necessary, to avoid creating unnecessary dask tasks
+    args_transposed = []
+    for a in args_expanded:
+        if a.dims != all_dims_ordered:
+            args_transposed.append(a.transpose(*all_dims_ordered))
+        else:
+            args.transposed.append(a)
+    args_data = [a.data for a in args_transposed]
+
+    if N_weights:
+        weights_data = args_data.pop()
+
+    if dim is not None:
+        dims_to_keep = [d for d in a_dims if d not in dim]
+        axis = [args_transposed[0].get_axis_num(d) for d in dim]
+    else:
+        dims_to_keep = []
+        axis = None
+
+    h_data = _histogram(*args_data, weights=weights_data, bins=bins, axis=axis,
+                        block_size=block_size)
+
     # create output dims
     new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
     bin_centers = [0.5*(bin[:-1] + bin[1:]) for bin in bins]
-    new_coords = {name: ((name,), bin_center, a.attrs)
-                  for name, bin_center, a in zip(new_dims, bin_centers, args)}
+    coords = {name: ((name,), bin_center, a.attrs)
+              for name, bin_center, a in zip(new_dims, bin_centers, args)}
+    coords.update({d: })
+    output_dims = dims_to_keep + new_dims
 
     # CF conventions tell us how to specify cell boundaries
     # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#cell-boundaries
@@ -114,32 +138,17 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     edge_coords = {name: ((name,), bin_edge, a.attrs)
                   for name, bin_edge, a in zip(edge_dims, bins, args)}
 
-    histogram_kwargs = dict(bins=bins, axis=axis, block_size=block_size)
+    da_out = xr.DataArray(h_data, dims=dims, coords=coords)
+    return da_out
 
     # we need weights to be passed through apply_func's alignment algorithm,
     # so we include it as an arg, so we create a wrapper function to do so
     # this feels like a hack
-    def _histogram_wrapped(*args, **kwargs):
-        alist = list(args)
-        weights = [alist.pop() for n in range(N_weights)]
-        if N_weights == 0:
-            weights = None
-        elif N_weights == 1:
-            weights = weights[0] # squeeze
-        return _histogram(*alist, weights=weights, **kwargs)
-
-    res = xr.apply_ufunc(_histogram_wrapped, *args,
-                         kwargs=histogram_kwargs,
-                         input_core_dims=input_core_dims,
-                         output_core_dims=[new_dims],
-                         vectorize=False,
-                         join='exact',
-                         dask='allowed')
-    res = res.rename('histogram')
-
-    res.coords.update(new_coords)
-
-    # raises ValueError: cannot add coordinates with new dimensions to a DataArray
-    #res.coords.update(edge_coords)
-
-    return res
+    # def _histogram_wrapped(*args, **kwargs):
+    #     alist = list(args)
+    #     weights = [alist.pop() for n in range(N_weights)]
+    #     if N_weights == 0:
+    #         weights = None
+    #     elif N_weights == 1:
+    #         weights = weights[0] # squeeze
+    #     return _histogram(*alist, weights=weights, **kwargs)

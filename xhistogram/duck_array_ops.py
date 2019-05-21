@@ -33,6 +33,8 @@ digitize = _dask_or_eager_func('digitize')
 bincount = _dask_or_eager_func('bincount')
 reshape = _dask_or_eager_func('reshape')
 concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
+#broadcast_to = _dask_or_eager_func('broadcast_to')
+broadcast_arrays = _dask_or_eager_func('broadcast_arrays')
 
 # dask doesn't yet have this
 # https://github.com/dask/dask/issues/2557
@@ -52,3 +54,17 @@ def ravel_multi_index(multi_index, dims, order='C'):
                                  for n in range(1, len(dims))]
     full_index = [of * ix for of, ix in zip(offset_factors, multi_index)]
     return sum(full_index)
+
+
+# def broadcast_arrays(*args):
+#     all_shapes = np.array([a.shape for a in args])
+#     max_shape = all_shapes.max(axis=0)
+#     for shape in all_shapes:
+#         for n, nmax in zip(shape, max_shape):
+#             if n==1 or n==max_shape:
+#                 pass
+#             else:
+#                 raise ValueError('Incompatible shape for broadcasting. '
+#                                  f'shape: {shape}, max_shape: {max_shape}')
+#     is_dask = [isinstance(a, dsa.Array) for a in args]
+#     chunk_shapes = [a.chunks for a in all_shapes]
