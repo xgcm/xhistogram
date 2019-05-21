@@ -32,11 +32,13 @@ def _bincount_2d(bin_indices, weights, N, hist_shapes):
     return bc_offset.reshape(final_shape)
 
 
-def _bincount_loop(bin_indices, weights, N, hist_shapes, block_size):
+def _bincount_loop(bin_indices, weights, N, hist_shapes, block_chunks):
     M = bin_indices.shape[0]
+    assert sum(block_chunks) == M
     block_counts = []
-    for m_start in range(0, M, block_size):
-        m_end = min(m_start + block_size, M)
+    # iterate over chunks
+    bounds = np.cumsum((0,) + block_chunks)
+    for m_start, m_end in zip(bounds[:-1], bounds[1:]):
         bin_indices_block = bin_indices[m_start:m_end]
         weights_block = weights[m_start:m_end] if weights is not None else None
         bc_block = _bincount_2d(bin_indices_block, weights_block, N, hist_shapes)
@@ -46,11 +48,39 @@ def _bincount_loop(bin_indices, weights, N, hist_shapes, block_size):
     return all_counts.reshape(final_shape)
 
 
-def _dispatch_bincount(bin_indices, weights, N, hist_shapes, block_size=None):
+def _determine_block_chunks(bin_indices, block_size):
+    M, N = bin_indices.shape
     if block_size is None:
+        return (M,)
+    if block_size == 'auto':
+        try:
+            # dask arrays - use the pre-existing chunks
+            chunks = bin_indices.chunks
+            return chunks[0]
+        except AttributeError:
+            # automatically pick a chunk size
+            # this a a heueristic without much basis
+            _MAX_CHUNK_SIZE = 10_000_000
+            block_size = min(_MAX_CHUNK_SIZE // N, M)
+    assert isinstance(block_size, int)
+    num_chunks = M // block_size
+    block_chunks = num_chunks * (block_size,)
+    residual = M % block_size
+    if residual:
+        block_chunks += (residual,)
+    assert sum(block_chunks) == M
+    return block_chunks
+
+
+def _dispatch_bincount(bin_indices, weights, N, hist_shapes, block_size=None):
+    # block_chunks is like a dask chunk, a tuple that divides up the first
+    # axis of bin_indices
+    block_chunks = _determine_block_chunks(bin_indices, block_size)
+    if len(block_chunks) == 1:
+        # single global chunk, don't need a loop over chunks
         return _bincount_2d(bin_indices, weights, N, hist_shapes)
     else:
-        return _bincount_loop(bin_indices, weights, N, hist_shapes, block_size)
+        return _bincount_loop(bin_indices, weights, N, hist_shapes, block_chunks)
 
 
 def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
@@ -102,7 +132,7 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
 
 
 def histogram(*args, bins=None, axis=None, weights=None, density=False,
-              block_size=None):
+              block_size='auto'):
     """Histogram applied along specified axis / axes.
 
     Parameters
@@ -141,11 +171,13 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
         the *integral* over the range is 1. Note that the sum of the
         histogram values will not be equal to 1 unless bins of unity
         width are chosen; it is not a probability *mass* function.
-    block_size : int, optional
+    block_size : int or 'auto', optional
         A parameter which governs the algorithm used to compute the histogram.
         Using a nonzero value splits the histogram calculation over the
         non-histogram axes into blocks of size ``block_size``, iterating over
-        them with a loop (numpy inputs) or in parallel (dask inputs).
+        them with a loop (numpy inputs) or in parallel (dask inputs). If
+        ``'auto'``, blocks will be determined either by the underlying dask
+        chunks (dask inputs) or an experimental built-in heuristic (numpy inputs).
 
     Returns
     -------
@@ -154,7 +186,7 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
 
     See Also
     --------
-    bincount, histogram, digitize
+    numpy.histogram, numpy.bincount, numpy.digitize
     """
 
     a0 = args[0]
@@ -205,6 +237,7 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
 
     all_args_reshaped = [reshape_input(a) for a in all_args_broadcast]
 
+    print('block_size', block_size)
     for a in all_args_reshaped:
         print(type(a), a.shape, getattr(a, 'chunks', None))
 

@@ -8,7 +8,7 @@ from .core import histogram as _histogram
 
 
 def histogram(*args, bins=None, dim=None, weights=None, density=False,
-              block_size=None, bin_dim_suffix='_bin',
+              block_size='auto', bin_dim_suffix='_bin',
               bin_edge_suffix='_bin_edge'):
     """Histogram applied along specified dimensions.
 
@@ -48,11 +48,13 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         the *integral* over the range is 1. Note that the sum of the
         histogram values will not be equal to 1 unless bins of unity
         width are chosen; it is not a probability *mass* function.
-    block_size : int, optional
+    block_size : int or 'auto', optional
         A parameter which governs the algorithm used to compute the histogram.
         Using a nonzero value splits the histogram calculation over the
-        non-histogram dims into blocks of size ``block_size``, iterating over
-        them with a loop (numpy inputs) or in parallel (dask inputs).
+        non-histogram axes into blocks of size ``block_size``, iterating over
+        them with a loop (numpy inputs) or in parallel (dask inputs). If
+        ``'auto'``, blocks will be determined either by the underlying dask
+        chunks (dask inputs) or an experimental built-in heuristic (numpy inputs).
 
     Returns
     -------

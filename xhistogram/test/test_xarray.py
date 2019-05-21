@@ -59,6 +59,8 @@ def test_histogram_ones(ones, ndims):
         _check_result(h, d)
 
 
+# TODO: refactor this test to use better fixtures
+# (it currently has a ton of loops)
 @pytest.mark.parametrize('ndims', [1, 2, 3, 4])
 def test_weights(ones, ndims):
     dims = ones.dims
