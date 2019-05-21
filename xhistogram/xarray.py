@@ -136,11 +136,13 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#cell-boundaries
     # However, they require introduction of an additional dimension.
     # I don't like that.
-    edge_dims = [a.name + bin_edge_suffix for a in args]
+    edge_dims = [a.name + bin_edge_suffix for a in args[:N_args]]
     edge_coords = {name: ((name,), bin_edge, a.attrs)
                   for name, bin_edge, a in zip(edge_dims, bins, args)}
 
-    da_out = xr.DataArray(h_data, dims=output_dims, coords=coords)
+    output_name = '_'.join(['histogram'] + [a.name for a in args[:N_args]])
+    da_out = xr.DataArray(h_data, dims=output_dims, coords=coords,
+                          name=output_name)
     return da_out
 
     # we need weights to be passed through apply_func's alignment algorithm,

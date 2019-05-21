@@ -51,7 +51,7 @@ def test_histogram_ones(ones, ndims):
         h_sum_expected = xr.DataArray([0, ones.size, 0],
                                       dims=['ones_bin'],
                                       coords={'ones_bin': ('ones_bin', bins_c)},
-                                      name='histogram')
+                                      name='histogram_ones')
         xr.testing.assert_identical(h_sum, h_sum_expected)
 
     for d in combinations(dims, ndims):
@@ -80,7 +80,7 @@ def test_weights(ones, ndims):
         h_sum_expected = xr.DataArray([0, weight_value * ones.size, 0],
                                       dims=['ones_bin'],
                                       coords={'ones_bin': ('ones_bin', bins_c)},
-                                      name='histogram')
+                                      name='histogram_ones')
         xr.testing.assert_identical(h_sum, h_sum_expected)
 
     # get every possible combination of sub-dimensions
