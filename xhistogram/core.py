@@ -6,7 +6,7 @@ Numpy API for xhistogram.
 import numpy as np
 from functools import reduce
 from .duck_array_ops import (digitize, bincount, reshape, ravel_multi_index,
-    concatenate)
+    concatenate, broadcast_arrays)
 
 
 def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
@@ -180,8 +180,10 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
         kept_axes_shape = tuple([a0.shape[i]
                                  for i in range(a0.ndim) if i not in axis])
 
-    args_and_weights = list(args) + [weights]
-    args_and_weights_broadcast = _broadcast_arrays(*args_and_weights)
+    all_args = list(args)
+    if weights is not None:
+         all_args += [weights]
+    all_args_broadcast = broadcast_arrays(*all_args)
 
     def reshape_input(a):
         if do_full_array:
@@ -201,11 +203,18 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
             d = reshape(c, (new_dim_0, new_dim_1))
         return d
 
-    args_reshaped = [reshape_input(a) for a in args]
-    if weights is not None:
-        weights = reshape_input(weights)
+    all_args_reshaped = [reshape_input(a) for a in all_args_broadcast]
 
-    h = _histogram_2d_vectorized(*args_reshaped, bins=bins, weights=weights,
+    for a in all_args_reshaped:
+        print(type(a), a.shape, getattr(a, 'chunks', None))
+
+    if weights is not None:
+        weights_reshaped = all_args_reshaped.pop()
+    else:
+        weights_reshaped = None
+
+    h = _histogram_2d_vectorized(*all_args_reshaped, bins=bins,
+                                 weights=weights_reshaped,
                                  density=density, block_size=block_size)
 
     if h.shape[0] == 1:

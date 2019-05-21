@@ -93,11 +93,12 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
     # roll our own broadcasting
     # now manually expand the arrays
-    all_dims = set([d for a in a for d in arg.dims])
+    all_dims = set([d for a in args for d in a.dims])
     all_dims_ordered = list(all_dims)
     args_expanded = []
     for a in args:
-        a_expanded = a.expand_dims(all_dims - set(a.dims))
+        expand_keys = all_dims - set(a.dims)
+        a_expanded = a.expand_dims({k: 1 for k in expand_keys})
         args_expanded.append(a_expanded)
 
     # only transpose if necessary, to avoid creating unnecessary dask tasks
@@ -111,6 +112,8 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
     if N_weights:
         weights_data = args_data.pop()
+    else:
+        weights_data = None
 
     if dim is not None:
         dims_to_keep = [d for d in a_dims if d not in dim]
@@ -127,7 +130,6 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     bin_centers = [0.5*(bin[:-1] + bin[1:]) for bin in bins]
     coords = {name: ((name,), bin_center, a.attrs)
               for name, bin_center, a in zip(new_dims, bin_centers, args)}
-    coords.update({d: })
     output_dims = dims_to_keep + new_dims
 
     # CF conventions tell us how to specify cell boundaries
@@ -138,7 +140,7 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     edge_coords = {name: ((name,), bin_edge, a.attrs)
                   for name, bin_edge, a in zip(edge_dims, bins, args)}
 
-    da_out = xr.DataArray(h_data, dims=dims, coords=coords)
+    da_out = xr.DataArray(h_data, dims=output_dims, coords=coords)
     return da_out
 
     # we need weights to be passed through apply_func's alignment algorithm,
