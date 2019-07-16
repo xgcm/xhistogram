@@ -10,7 +10,7 @@ dependencies:
   - matplotlib
   - jupyter_client
   - ipykernel
-  - nbsphinx
   - pip
   - pip:
+    - nbsphinx
     - docrep
