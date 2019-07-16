@@ -22,7 +22,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['xarray', 'dask', 'numpy>=1.16']
+INSTALL_REQUIRES = ['xarray>=0.12.0', 'dask', 'numpy>=1.16']
 PYTHON_REQUIRES = '>=3.6'
 
 DESCRIPTION = "Fast, flexible, label-aware histograms for numpy and xarray"
