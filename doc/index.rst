@@ -19,6 +19,7 @@ dask is that they automatically act over the entire input array (i.e. they
 "flatten" the data). Xhistogram allows you to choose which axes / dimensions
 you want to preserve and which you want to flatten. It also allows you to
 combine N arbitrary inputs to produce N-dimensional histograms.
+A good place to start is the :doc:`tutorial`.
 
 Contents
 --------
@@ -27,7 +28,6 @@ Contents
    :maxdepth: 1
 
    installation
-   tutorial_numpy
-   tutorial_xarray
+   tutorial
    api
    contributing

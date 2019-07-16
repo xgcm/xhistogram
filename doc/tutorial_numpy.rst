@@ -1,2 +1,0 @@
-Tutorial with Numpy
-===================
