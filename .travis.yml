@@ -8,7 +8,9 @@ matrix:
   fast_finish: true
   include:
   - python: 3.6
-    env: CONDA_ENV=py36
+    env: CONDA_ENV="ci/environment-py36.yml" DOCTEST=false
+  - python: 3.6
+    env: CONDA_ENV="doc/environment.yml" DOCTEST=true
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -24,12 +26,15 @@ before_install:
   - conda info -a
 
 install:
-  - conda env create --file ci/environment-$CONDA_ENV.yml
-  - source activate test_env
+  - conda env create -f $CONDA_ENV
+  - source activate xhistogram_test_env
   - pip install -e .
 
 script:
-  - py.test -v --cov=xhistogram --cov-config .coveragerc --cov-report term-missing
+  - if [ $DOCTEST == 'true' ];
+    then cd doc; make html;
+    else py.test -v --cov=xhistogram --cov-config .coveragerc --cov-report term-missing;
+    fi
 
 after_success:
   - codecov

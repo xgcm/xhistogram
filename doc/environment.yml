@@ -1,4 +1,4 @@
-name: xhistogram
+name: xhistogram_test_env
 dependencies:
   - python=3.6
   - xarray
@@ -11,7 +11,8 @@ dependencies:
   - matplotlib
   - jupyter_client
   - ipykernel
+  - pandoc
   - pip
   - pip:
     - nbsphinx
-    - docrep
+    - sphinx_rtd_theme
