@@ -50,6 +50,9 @@ extensions = [
 # https://nbsphinx.readthedocs.io/en/0.2.14/never-execute.html
 # nbsphinx_execute = 'never'
 
+# give cells 10 minutes to run before timeout
+nbsphinx_timeout = 600
+
 # http://stackoverflow.com/questions/5599254/how-to-use-sphinxs-autodoc-to-document-a-classs-init-self-method
 def skip(app, what, name, obj, skip, options):
     if name == "__init__":
