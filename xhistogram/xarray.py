@@ -125,7 +125,6 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         dims_to_keep = []
         axis = None
 
-    print(args_data[0].shape)
     h_data = _histogram(*args_data, weights=weights_data, bins=bins, axis=axis,
                         block_size=block_size)
 
