@@ -32,7 +32,7 @@ install:
 
 script:
   - if [ $DOCTEST == 'true' ];
-    then cd doc; make html
+    then cd doc; make html;
     else py.test -v --cov=xhistogram --cov-config .coveragerc --cov-report term-missing;
     fi
 
