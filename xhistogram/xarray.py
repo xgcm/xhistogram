@@ -4,6 +4,7 @@ Xarray API for xhistogram.
 
 import xarray as xr
 import numpy as np
+from collections import OrderedDict
 from .core import histogram as _histogram
 
 
@@ -95,11 +96,11 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
     # roll our own broadcasting
     # now manually expand the arrays
-    all_dims = set([d for a in args for d in a.dims])
-    all_dims_ordered = list(all_dims)
+    all_dims = [d for a in args for d in a.dims]
+    all_dims_ordered = list(OrderedDict.fromkeys(all_dims))
     args_expanded = []
     for a in args:
-        expand_keys = all_dims - set(a.dims)
+        expand_keys = [d for d in all_dims_ordered if d not in a.dims]
         a_expanded = a.expand_dims({k: 1 for k in expand_keys})
         args_expanded.append(a_expanded)
 
@@ -118,21 +119,30 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         weights_data = None
 
     if dim is not None:
-        dims_to_keep = [d for d in a_dims if d not in dim]
+        dims_to_keep = [d for d in all_dims_ordered if d not in dim]
         axis = [args_transposed[0].get_axis_num(d) for d in dim]
     else:
         dims_to_keep = []
         axis = None
 
+    print(args_data[0].shape)
     h_data = _histogram(*args_data, weights=weights_data, bins=bins, axis=axis,
                         block_size=block_size)
 
     # create output dims
     new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
-    bin_centers = [0.5*(bin[:-1] + bin[1:]) for bin in bins]
-    coords = {name: ((name,), bin_center, a.attrs)
-              for name, bin_center, a in zip(new_dims, bin_centers, args)}
     output_dims = dims_to_keep + new_dims
+
+    # create new coords
+    bin_centers = [0.5*(bin[:-1] + bin[1:]) for bin in bins]
+    new_coords = {name: ((name,), bin_center, a.attrs)
+                  for name, bin_center, a in zip(new_dims, bin_centers, args)}
+
+    old_coords = {name: a0[name]
+                  for name in dims_to_keep if name in a0.coords}
+    all_coords = {}
+    all_coords.update(old_coords)
+    all_coords.update(new_coords)
 
     # CF conventions tell us how to specify cell boundaries
     # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#cell-boundaries
@@ -143,7 +153,8 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
                   for name, bin_edge, a in zip(edge_dims, bins, args)}
 
     output_name = '_'.join(['histogram'] + [a.name for a in args[:N_args]])
-    da_out = xr.DataArray(h_data, dims=output_dims, coords=coords,
+
+    da_out = xr.DataArray(h_data, dims=output_dims, coords=all_coords,
                           name=output_name)
     return da_out
 
