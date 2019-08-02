@@ -2,6 +2,7 @@ name: xhistogram
 dependencies:
   - python=3.6
   - xarray
+  - netcdf4
   - numpy>=1.16
   - pytest
   - numpydoc
