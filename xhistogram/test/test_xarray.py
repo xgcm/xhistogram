@@ -94,3 +94,31 @@ def test_weights(ones, ndims):
                 for d in combinations(dims, nc+1):
                     h = histogram(ones, weights=weights, bins=[bins], dim=d)
                     _check_result(h, d)
+
+
+# test for issue #5
+def test_dims_and_coords():
+    time_axis = np.arange(4)
+    depth_axis = np.arange(10)
+    X_axis = np.arange(30)
+    Y_axis = np.arange(30)
+
+    dat1 = np.random.randint(low=0, high=100,
+                             size=(len(time_axis), len(depth_axis),
+                                   len(X_axis), len(Y_axis)))
+    array1 = xr.DataArray(dat1, coords=[time_axis,depth_axis,X_axis,Y_axis],
+                          dims=['time', 'depth', 'X', 'Y'], name='one')
+
+    dat2 = np.random.randint(low=0, high=50,
+                             size=(len(time_axis), len(depth_axis),
+                                   len(X_axis), len(Y_axis)))
+    array2 = xr.DataArray(dat2, coords=[time_axis,depth_axis,X_axis,Y_axis],
+                          dims=['time','depth','X','Y'], name='two')
+
+    bins1 = np.linspace(0, 100, 50)
+    bins2 = np.linspace(0,50,25)
+
+    result = histogram(array1,array2,dim = ['X','Y'] , bins=[bins1,bins2])
+    assert result.dims == ('time', 'depth', 'one_bin', 'two_bin')
+    assert result.time.identical(array1.time)
+    assert result.depth.identical(array2.depth)
