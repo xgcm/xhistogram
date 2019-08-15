@@ -8,6 +8,17 @@ GitHub repo: `https://github.com/xgcm/xhistogram <https://github.com/xgcm/xhisto
 Release History
 ---------------
 
+v0.1.1
+~~~~~~
+
+Minor bugfix release
+
+- Imroved documentation examples.
+  By `Dhruv Balwada <https://github.com/dhruvbalwada>`_.
+- Fixed issue :issue:`5` related to incorrect dimension order
+  and dropping of dimension coordinates.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
 v0.1
 ~~~~
 
