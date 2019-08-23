@@ -8,6 +8,10 @@ matrix:
   fast_finish: true
   include:
   - python: 3.6
+    env: CONDA_ENV="ci/environment-py36-numpy1.16.yml" DOCTEST=false
+  - python: 3.6
+    env: CONDA_ENV="ci/environment-py36-numpy1.17.yml" DOCTEST=false
+  - python: 3.6
     env: CONDA_ENV="ci/environment-py36.yml" DOCTEST=false
   - python: 3.6
     env: CONDA_ENV="doc/environment.yml" DOCTEST=true
