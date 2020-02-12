@@ -131,12 +131,18 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     bin_counts = bin_counts[slices]
 
     if density:
-        if N_inputs > 1:
-            raise NotImplementedError("density kwarg only implemented for 1D "
-                                      f"histograms, but there are {N_inputs} "
-                                      "input arrays")
-        db = np.diff(bins[0])
-        bin_counts = bin_counts / db / bin_counts.sum()
+        bin_widths = [np.diff(b) for b in bins]
+        if N_inputs == 1:
+            bin_areas = bin_widths[0]
+        elif N_inputs == 2:
+            bin_areas = np.outer(*bin_widths)
+        else:
+            # TODO use np.einsum for N-D case?
+            raise NotImplementedError("density=True not implemented for "
+                                      "histograms of dimension > 2, but there "
+                                      f"are {N_inputs} input variables")
+
+        bin_counts = bin_counts / bin_areas / bin_counts.sum()
 
     return bin_counts
 
