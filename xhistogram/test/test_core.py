@@ -28,6 +28,33 @@ def test_histogram_results_1d(block_size):
 
 
 @pytest.mark.parametrize('block_size', [None, 1, 2])
+def test_histogram_results_1d_density(block_size):
+    nrows, ncols = 5, 20
+    data = np.random.randn(nrows, ncols)
+    bins = np.linspace(-4, 4, 10)
+
+    h = histogram(data, bins=bins, axis=1, block_size=block_size, density=True)
+    assert h.shape == (nrows, len(bins)-1)
+
+    # make sure we get the same thing as histogram
+    hist, _ = np.histogram(data, bins=bins, density=True)
+    np.testing.assert_allclose(hist, h.sum(axis=0))
+
+    # check integral is 1
+    widths = np.diff(bins)
+    integral = np.sum(hist * widths)
+    np.testing.assert_allclose(integral, 1.0)
+
+    # now try with no axis
+    h_na = histogram(data, bins=bins, block_size=block_size, density=True)
+    np.testing.assert_array_equal(hist, h_na)
+
+    # check integral is 1
+    integral = np.sum(h_na * widths)
+    np.testing.assert_allclose(integral, 1.0)
+
+
+@pytest.mark.parametrize('block_size', [None, 1, 2])
 def test_histogram_results_1d_weighted(block_size):
     nrows, ncols = 5, 20
     data = np.random.randn(nrows, ncols)
@@ -52,7 +79,6 @@ def test_histogram_results_1d_weighted_broadcasting(block_size):
     np.testing.assert_array_equal(2*h, h_w)
 
 
-
 def test_histogram_results_2d():
     nrows, ncols = 5, 20
     data_a = np.random.randn(nrows, ncols)
@@ -68,6 +94,30 @@ def test_histogram_results_2d():
     hist, _, _ = np.histogram2d(data_a.ravel(), data_b.ravel(),
                                 bins=[bins_a, bins_b])
     np.testing.assert_array_equal(hist, h)
+
+
+def test_histogram_results_2d_density():
+    nrows, ncols = 5, 20
+    data_a = np.random.randn(nrows, ncols)
+    data_b = np.random.randn(nrows, ncols)
+    nbins_a = 9
+    bins_a = np.linspace(-4, 4, nbins_a + 1)
+    nbins_b = 10
+    bins_b = np.linspace(-4, 4, nbins_b + 1)
+
+    h = histogram(data_a, data_b, bins=[bins_a, bins_b], density=True)
+    assert h.shape == (nbins_a, nbins_b)
+
+    hist, _, _ = np.histogram2d(data_a.ravel(), data_b.ravel(),
+                                bins=[bins_a, bins_b], density=True)
+    np.testing.assert_allclose(hist, h)
+
+    # check integral is 1
+    widths_a = np.diff(bins_a)
+    widths_b = np.diff(bins_b)
+    areas = np.outer(widths_a, widths_b)
+    integral = np.sum(hist * areas)
+    np.testing.assert_allclose(integral, 1.0)
 
 
 @pytest.mark.parametrize('block_size', [None, 5, 'auto'])
