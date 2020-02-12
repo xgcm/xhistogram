@@ -128,7 +128,17 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
     slices = (slice(None),) + (N_inputs * (slice(1, -1),))
-    return bin_counts[slices]
+    bin_counts = bin_counts[slices]
+
+    if density:
+        if N_inputs > 1:
+            raise NotImplementedError("density kwarg only implemented for 1D "
+                                      f"histograms, but there are {N_inputs} "
+                                      "input arrays")
+        db = np.diff(bins[0])
+        bin_counts = bin_counts / db / bin_counts.sum()
+
+    return bin_counts
 
 
 def histogram(*args, bins=None, axis=None, weights=None, density=False,
