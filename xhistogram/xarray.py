@@ -126,7 +126,7 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         axis = None
 
     h_data = _histogram(*args_data, weights=weights_data, bins=bins, axis=axis,
-                        block_size=block_size)
+                        density=density, block_size=block_size)
 
     # create output dims
     new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
