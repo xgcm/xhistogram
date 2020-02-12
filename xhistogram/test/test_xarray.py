@@ -59,6 +59,32 @@ def test_histogram_ones(ones, ndims):
         _check_result(h, d)
 
 
+@pytest.mark.parametrize('ndims', [1, 2, 3, 4])
+def test_histogram_ones_density(ones, ndims):
+    dims = ones.dims
+    if ones.ndim < ndims:
+        pytest.skip(
+            "Don't need to test when number of dimension combinations "
+            "exceeds the number of array dimensions")
+
+    # everything should be in the middle bin (index 1)
+    bins = np.array([0, 0.9, 1.1, 2])
+    bin_area = 0.2
+
+    def _check_result(h_density, d):
+        other_dims = [dim for dim in ones.dims if dim not in d]
+        if len(other_dims) > 0:
+            assert set(other_dims) <= set(h_density.dims)
+
+        # check that all integrals over pdfs at different locations are = 1
+        h_integrals = (h_density * bin_area).sum(dim='ones_bin')
+        np.testing.assert_allclose(h_integrals.values, 1.0)
+
+    for d in combinations(dims, ndims):
+        h_density = histogram(ones, bins=[bins], dim=d, density=True)
+        _check_result(h_density, d)
+
+
 # TODO: refactor this test to use better fixtures
 # (it currently has a ton of loops)
 @pytest.mark.parametrize('ndims', [1, 2, 3, 4])
