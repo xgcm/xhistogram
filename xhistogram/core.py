@@ -252,6 +252,8 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
                                           block_size=block_size)
 
     if density:
+        # Normalise by dividing by bin counts and areas such that all the
+        # histogram data integrated over all dimensions = 1
         bin_widths = [np.diff(b) for b in bins]
         if n_inputs == 1:
             bin_areas = bin_widths[0]
