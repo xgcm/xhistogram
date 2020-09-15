@@ -258,15 +258,12 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
         elif n_inputs == 2:
             bin_areas = np.outer(*bin_widths)
         else:
-            # TODO use np.einsum for N-D case?
-            raise NotImplementedError("density=True not implemented for "
-                                      "histograms of dimension > 2, but there "
-                                      f"are {n_inputs} input variables")
+            # Slower, but N-dimensional logic
+            bin_areas = np.prod(np.ix_(*bin_widths))
 
         h = bin_counts / bin_areas / bin_counts.sum()
     else:
         h = bin_counts
-
 
     if h.shape[0] == 1:
         assert do_full_array
