@@ -88,7 +88,6 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     """Calculate the histogram independently on each row of a 2D array"""
 
     N_inputs = len(args)
-    bins = _ensure_bins_is_a_list_of_arrays(bins, N_inputs)
     a0 = args[0]
 
     # consistency checks for inputa
@@ -129,20 +128,6 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     # TODO: make this optional?
     slices = (slice(None),) + (N_inputs * (slice(1, -1),))
     bin_counts = bin_counts[slices]
-
-    if density:
-        bin_widths = [np.diff(b) for b in bins]
-        if N_inputs == 1:
-            bin_areas = bin_widths[0]
-        elif N_inputs == 2:
-            bin_areas = np.outer(*bin_widths)
-        else:
-            # TODO use np.einsum for N-D case?
-            raise NotImplementedError("density=True not implemented for "
-                                      "histograms of dimension > 2, but there "
-                                      f"are {N_inputs} input variables")
-
-        bin_counts = bin_counts / bin_areas / bin_counts.sum()
 
     return bin_counts
 
@@ -258,9 +243,30 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
     else:
         weights_reshaped = None
 
-    h = _histogram_2d_vectorized(*all_args_reshaped, bins=bins,
-                                 weights=weights_reshaped,
-                                 density=density, block_size=block_size)
+    n_inputs = len(all_args_reshaped)
+    bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
+
+    bin_counts = _histogram_2d_vectorized(*all_args_reshaped, bins=bins,
+                                          weights=weights_reshaped,
+                                          density=density,
+                                          block_size=block_size)
+
+    if density:
+        bin_widths = [np.diff(b) for b in bins]
+        if n_inputs == 1:
+            bin_areas = bin_widths[0]
+        elif n_inputs == 2:
+            bin_areas = np.outer(*bin_widths)
+        else:
+            # TODO use np.einsum for N-D case?
+            raise NotImplementedError("density=True not implemented for "
+                                      "histograms of dimension > 2, but there "
+                                      f"are {n_inputs} input variables")
+
+        h = bin_counts / bin_areas / bin_counts.sum()
+    else:
+        h = bin_counts
+
 
     if h.shape[0] == 1:
         assert do_full_array
