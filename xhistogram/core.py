@@ -88,7 +88,6 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     """Calculate the histogram independently on each row of a 2D array"""
 
     N_inputs = len(args)
-    bins = _ensure_bins_is_a_list_of_arrays(bins, N_inputs)
     a0 = args[0]
 
     # consistency checks for inputa
@@ -128,7 +127,9 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     # just throw out everything outside of the bins, as np.histogram does
     # TODO: make this optional?
     slices = (slice(None),) + (N_inputs * (slice(1, -1),))
-    return bin_counts[slices]
+    bin_counts = bin_counts[slices]
+
+    return bin_counts
 
 
 def histogram(*args, bins=None, axis=None, weights=None, density=False,
@@ -242,9 +243,29 @@ def histogram(*args, bins=None, axis=None, weights=None, density=False,
     else:
         weights_reshaped = None
 
-    h = _histogram_2d_vectorized(*all_args_reshaped, bins=bins,
-                                 weights=weights_reshaped,
-                                 density=density, block_size=block_size)
+    n_inputs = len(all_args_reshaped)
+    bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
+
+    bin_counts = _histogram_2d_vectorized(*all_args_reshaped, bins=bins,
+                                          weights=weights_reshaped,
+                                          density=density,
+                                          block_size=block_size)
+
+    if density:
+        # Normalise by dividing by bin counts and areas such that all the
+        # histogram data integrated over all dimensions = 1
+        bin_widths = [np.diff(b) for b in bins]
+        if n_inputs == 1:
+            bin_areas = bin_widths[0]
+        elif n_inputs == 2:
+            bin_areas = np.outer(*bin_widths)
+        else:
+            # Slower, but N-dimensional logic
+            bin_areas = np.prod(np.ix_(*bin_widths))
+
+        h = bin_counts / bin_areas / bin_counts.sum()
+    else:
+        h = bin_counts
 
     if h.shape[0] == 1:
         assert do_full_array

@@ -126,7 +126,7 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         axis = None
 
     h_data = _histogram(*args_data, weights=weights_data, bins=bins, axis=axis,
-                        block_size=block_size)
+                        density=density, block_size=block_size)
 
     # create output dims
     new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
@@ -155,6 +155,12 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
     da_out = xr.DataArray(h_data, dims=output_dims, coords=all_coords,
                           name=output_name)
+
+    if density:
+        # correct for overcounting the bins which weren't histogrammed along
+        n_bins_bystander_dims = da_out.isel(**{bd: 0 for bd in new_dims}).size
+        da_out = da_out * n_bins_bystander_dims
+
     return da_out
 
     # we need weights to be passed through apply_func's alignment algorithm,
