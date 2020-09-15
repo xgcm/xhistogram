@@ -148,3 +148,26 @@ def test_dims_and_coords():
     assert result.dims == ('time', 'depth', 'one_bin', 'two_bin')
     assert result.time.identical(array1.time)
     assert result.depth.identical(array2.depth)
+
+
+@pytest.mark.parametrize('number_of_inputs', [1, 2])
+@pytest.mark.parametrize('keep_coords', [True, False])
+def test_carry_coords(keep_coords, number_of_inputs):
+    time_axis = np.arange(40)
+    X_axis = np.arange(10)
+    Y_axis = np.arange(10)
+    data = np.random.randint(low=0, high=100,
+                             size=(len(time_axis),
+                                   len(X_axis), len(Y_axis)))
+    da = xr.DataArray(data, coords=[time_axis, X_axis, Y_axis],
+                      dims=['time', 'X', 'Y'], name='one')
+    # faking coordinates
+    da['lon'] = da.X ** 2 + da.Y ** 2
+    assert 'lon' in da.coords
+    bins = np.linspace(0, 100, 10)
+    result = histogram(*[da]*number_of_inputs, bins=[bins]*number_of_inputs,
+                       dim=['time'], keep_coords=keep_coords)
+    if keep_coords:
+        assert 'lon' in result.coords
+    else:
+        assert 'lon' not in result.coords

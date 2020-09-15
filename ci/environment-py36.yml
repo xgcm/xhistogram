@@ -5,6 +5,7 @@ dependencies:
   - dask
   - numpy
   - pytest
+  - pip
   - pip:
     - codecov
     - pytest-cov

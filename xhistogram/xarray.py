@@ -9,7 +9,7 @@ from .core import histogram as _histogram
 
 
 def histogram(*args, bins=None, dim=None, weights=None, density=False,
-              block_size='auto', bin_dim_suffix='_bin',
+              block_size='auto', keep_coords=False, bin_dim_suffix='_bin',
               bin_edge_suffix='_bin_edge'):
     """Histogram applied along specified dimensions.
 
@@ -56,6 +56,8 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         them with a loop (numpy inputs) or in parallel (dask inputs). If
         ``'auto'``, blocks will be determined either by the underlying dask
         chunks (dask inputs) or an experimental built-in heuristic (numpy inputs).
+    keep_coords : bool, optional
+        If ``True``, keep all coordinates. Default: ``False``
 
     Returns
     -------
@@ -80,19 +82,19 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         assert a.name is not None, 'all arrays must have a name'
 
     # we drop coords to simplify alignment
-    args = [da.reset_coords(drop=True) for da in args]
+    if not keep_coords:
+        args = [da.reset_coords(drop=True) for da in args]
     if N_weights:
         args += [weights.reset_coords(drop=True)]
     # explicitly broadcast so we understand what is going into apply_ufunc
     # (apply_ufunc might be doing this by itself again)
     args = list(xr.align(*args, join='exact'))
 
-
-
     # what happens if we skip this?
     #args = list(xr.broadcast(*args))
     a0 = args[0]
     a_dims = a0.dims
+    a_coords = a0.coords
 
     # roll our own broadcasting
     # now manually expand the arrays
@@ -137,11 +139,18 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     new_coords = {name: ((name,), bin_center, a.attrs)
                   for name, bin_center, a in zip(new_dims, bin_centers, args)}
 
-    old_coords = {name: a0[name]
-                  for name in dims_to_keep if name in a0.coords}
+    # old coords associated with dims
+    old_dim_coords = {name: a0[name]
+                  for name in dims_to_keep if name in a_coords}
+
     all_coords = {}
-    all_coords.update(old_coords)
+    all_coords.update(old_dim_coords)
     all_coords.update(new_coords)
+    # add compatible coords
+    if keep_coords:
+        for c in a_coords:
+            if c not in all_coords and set(a0[c].dims).issubset(output_dims):
+                all_coords[c] = a0[c]
 
     # CF conventions tell us how to specify cell boundaries
     # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#cell-boundaries
