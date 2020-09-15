@@ -120,6 +120,37 @@ def test_histogram_results_2d_density():
     np.testing.assert_allclose(integral, 1.0)
 
 
+def test_histogram_results_3d_density():
+    nrows, ncols = 5, 20
+    data_a = np.random.randn(nrows, ncols)
+    data_b = np.random.randn(nrows, ncols)
+    data_c = np.random.randn(nrows, ncols)
+    nbins_a = 9
+    bins_a = np.linspace(-4, 4, nbins_a + 1)
+    nbins_b = 10
+    bins_b = np.linspace(-4, 4, nbins_b + 1)
+    nbins_c = 9
+    bins_c = np.linspace(-4, 4, nbins_c + 1)
+
+    h = histogram(data_a, data_b, data_c, bins=[bins_a, bins_b, bins_c],
+                  density=True)
+
+    assert h.shape == (nbins_a, nbins_b, nbins_c)
+
+    hist, _ = np.histogramdd((data_a.ravel(), data_b.ravel(), data_c.ravel()),
+                             bins=[bins_a, bins_b, bins_c], density=True)
+
+    np.testing.assert_allclose(hist, h)
+
+    # check integral is 1
+    widths_a = np.diff(bins_a)
+    widths_b = np.diff(bins_b)
+    widths_c = np.diff(bins_c)
+    areas = np.einsum('i,j,k', widths_a, widths_b, widths_c)
+    integral = np.sum(hist * areas)
+    np.testing.assert_allclose(integral, 1.0)
+
+
 @pytest.mark.parametrize('block_size', [None, 5, 'auto'])
 @pytest.mark.parametrize('use_dask', [False, True])
 def test_histogram_shape(use_dask, block_size):
