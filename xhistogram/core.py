@@ -107,6 +107,15 @@ def _histogram_2d_vectorized(*args, bins=None, weights=None, density=False,
     # https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L864-L882
     # for now we stick with `digitize` because it's easy to understand how it works
 
+    # Add small increment to the last bin edge to make the final bin right-edge inclusive
+    # Note, this is the approach taken by sklearn, e.g.
+    # https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/calibration.py#L592
+    # but a better approach would be to use something like _search_sorted_inclusive() in 
+    # numpy histogram. This is an additional motivation for moving to searchsorted
+    bins = [np.concatenate((
+        b[:-1],
+        b[-1:] + 1e-8)) for b in bins]
+    
     # the maximum possible value of of digitize is nbins
     # for right=False:
     #   - 0 corresponds to a < b[0]

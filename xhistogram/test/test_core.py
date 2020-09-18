@@ -79,6 +79,27 @@ def test_histogram_results_1d_weighted_broadcasting(block_size):
     np.testing.assert_array_equal(2*h, h_w)
 
 
+@pytest.mark.parametrize('block_size', [None, 1, 2])
+def test_histogram_right_edge(block_size):
+    """Test that last bin is both left- and right-edge inclusive as it 
+        is for numpy.histogram
+    """
+    nrows, ncols = 5, 20
+    data = np.ones((nrows, ncols))
+    bins = np.array([0, 0.5, 1]) # All data at rightmost edge
+
+    h = histogram(data, bins=bins, axis=1, block_size=block_size)
+    assert h.shape == (nrows, len(bins)-1)
+
+    # make sure we get the same thing as histogram (all data in the last bin)
+    hist, _ = np.histogram(data, bins=bins)
+    np.testing.assert_array_equal(hist, h.sum(axis=0))
+
+    # now try with no axis
+    h_na = histogram(data, bins=bins, block_size=block_size)
+    np.testing.assert_array_equal(hist, h_na)
+    
+
 def test_histogram_results_2d():
     nrows, ncols = 5, 20
     data_a = np.random.randn(nrows, ncols)
