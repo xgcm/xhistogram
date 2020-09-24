@@ -8,6 +8,12 @@ GitHub repo: `https://github.com/xgcm/xhistogram <https://github.com/xgcm/xhisto
 Release History
 ---------------
 
+v0.1.?
+~~~~~
+
+- Aligned definition of `bins` with `numpy.histogram` (:pr:`???`)
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+
 v0.1.1
 ~~~~~~
 

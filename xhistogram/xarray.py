@@ -31,6 +31,9 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
           * A combination [int, array] or [array, int], where int
             is the number of bins and array is the bin edges.
 
+        When bin edges are specified, all but the last (righthand-most) bin include
+        the left edge and exclude the right edge. The last bin includes both edges.
+        
         A ``TypeError`` will be raised if ``args`` contains dask arrays and
         ``bins`` are not specified explicitly as a list of arrays.
     dim : tuple of strings, optional
