@@ -9,21 +9,23 @@ from .fixtures import empty_dask_array
 import pytest
 
 
+@pytest.mark.parametrix('density', False, True)
 @pytest.mark.parametrize('block_size', [None, 1, 2])
 def test_histogram_results_1d(block_size):
     nrows, ncols = 5, 20
     data = np.random.randn(nrows, ncols)
     bins = np.linspace(-4, 4, 10)
 
-    h = histogram(data, bins=bins, axis=1, block_size=block_size)
+    h = histogram(data, bins=bins, axis=1, block_size=block_size,
+                  density=density)
     assert h.shape == (nrows, len(bins)-1)
 
-    # make sure we get the same thing as histogram
-    hist, _ = np.histogram(data, bins=bins)
+    # make sure we get the same thing as numpy.histogram
+    hist, _ = np.histogram(data, bins=bins, density=density)
     np.testing.assert_array_equal(hist, h.sum(axis=0))
 
     # now try with no axis
-    h_na = histogram(data, bins=bins, block_size=block_size)
+    h_na = histogram(data, bins=bins, block_size=block_size, density=density)
     np.testing.assert_array_equal(hist, h_na)
 
 
