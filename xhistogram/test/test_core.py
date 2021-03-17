@@ -9,49 +9,35 @@ from .fixtures import empty_dask_array
 import pytest
 
 
+@pytest.mark.parametrize('density', [False, True])
 @pytest.mark.parametrize('block_size', [None, 1, 2])
-def test_histogram_results_1d(block_size):
+@pytest.mark.parametrize('axis', [1, None])
+def test_histogram_results_1d(block_size, density, axis):
     nrows, ncols = 5, 20
     data = np.random.randn(nrows, ncols)
     bins = np.linspace(-4, 4, 10)
 
-    h = histogram(data, bins=bins, axis=1, block_size=block_size)
-    assert h.shape == (nrows, len(bins)-1)
+    h = histogram(data, bins=bins, axis=axis, block_size=block_size,
+                  density=density)
 
-    # make sure we get the same thing as histogram
-    hist, _ = np.histogram(data, bins=bins)
-    np.testing.assert_array_equal(hist, h.sum(axis=0))
+    expected_shape = (nrows, len(bins)-1) if axis == 1 else (len(bins)-1,)
+    assert h.shape == expected_shape
 
-    # now try with no axis
-    h_na = histogram(data, bins=bins, block_size=block_size)
-    np.testing.assert_array_equal(hist, h_na)
+    # make sure we get the same thing as numpy.histogram
+    if axis:
+        expected = np.stack(
+            [np.histogram(data[i], bins=bins, density=density)[0]
+             for i in range(nrows)]
+        )
+    else:
+        expected = np.histogram(data, bins=bins, density=density)[0]
+    norm = nrows if (density and axis) else 1
+    np.testing.assert_allclose(h, expected / norm)
 
-
-@pytest.mark.parametrize('block_size', [None, 1, 2])
-def test_histogram_results_1d_density(block_size):
-    nrows, ncols = 5, 20
-    data = np.random.randn(nrows, ncols)
-    bins = np.linspace(-4, 4, 10)
-
-    h = histogram(data, bins=bins, axis=1, block_size=block_size, density=True)
-    assert h.shape == (nrows, len(bins)-1)
-
-    # make sure we get the same thing as histogram
-    hist, _ = np.histogram(data, bins=bins, density=True)
-    np.testing.assert_allclose(hist, h.sum(axis=0))
-
-    # check integral is 1
-    widths = np.diff(bins)
-    integral = np.sum(hist * widths)
-    np.testing.assert_allclose(integral, 1.0)
-
-    # now try with no axis
-    h_na = histogram(data, bins=bins, block_size=block_size, density=True)
-    np.testing.assert_array_equal(hist, h_na)
-
-    # check integral is 1
-    integral = np.sum(h_na * widths)
-    np.testing.assert_allclose(integral, 1.0)
+    if density:
+        widths = np.diff(bins)
+        integral = np.sum(h * widths)
+        np.testing.assert_allclose(integral, 1.0)
 
 
 @pytest.mark.parametrize('block_size', [None, 1, 2])
