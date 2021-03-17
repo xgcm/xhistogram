@@ -17,7 +17,7 @@ matrix:
     env: CONDA_ENV="ci/environment-py37.yml" DOCTEST=false
   - python: 3.8
     env: CONDA_ENV="ci/environment-py38.yml" DOCTEST=false
-  - python: 3.6
+  - python: 3.8
     env: CONDA_ENV="ci/environment-py38-upstream.yml" DOCTEST=false
   - python: 3.6
     env: CONDA_ENV="doc/environment.yml" DOCTEST=true
