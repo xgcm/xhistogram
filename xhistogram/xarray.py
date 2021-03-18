@@ -8,9 +8,17 @@ from collections import OrderedDict
 from .core import histogram as _histogram
 
 
-def histogram(*args, bins=None, dim=None, weights=None, density=False,
-              block_size='auto', keep_coords=False, bin_dim_suffix='_bin',
-              bin_edge_suffix='_bin_edge'):
+def histogram(
+    *args,
+    bins=None,
+    dim=None,
+    weights=None,
+    density=False,
+    block_size="auto",
+    keep_coords=False,
+    bin_dim_suffix="_bin",
+    bin_edge_suffix="_bin_edge"
+):
     """Histogram applied along specified dimensions.
 
     Parameters
@@ -33,7 +41,7 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
         When bin edges are specified, all but the last (righthand-most) bin include
         the left edge and exclude the right edge. The last bin includes both edges.
-        
+
         A ``TypeError`` will be raised if ``args`` contains dask arrays and
         ``bins`` are not specified explicitly as a list of arrays.
     dim : tuple of strings, optional
@@ -76,13 +84,13 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
 
     # some sanity checks
     # TODO: replace this with a more robust function
-    assert len(bins)==N_args
+    assert len(bins) == N_args
     for bin in bins:
-        assert isinstance(bin, np.ndarray), 'all bins must be numpy arrays'
+        assert isinstance(bin, np.ndarray), "all bins must be numpy arrays"
 
     for a in args:
         # TODO: make this a more robust check
-        assert a.name is not None, 'all arrays must have a name'
+        assert a.name is not None, "all arrays must have a name"
 
     # we drop coords to simplify alignment
     if not keep_coords:
@@ -91,10 +99,10 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         args += [weights.reset_coords(drop=True)]
     # explicitly broadcast so we understand what is going into apply_ufunc
     # (apply_ufunc might be doing this by itself again)
-    args = list(xr.align(*args, join='exact'))
+    args = list(xr.align(*args, join="exact"))
 
     # what happens if we skip this?
-    #args = list(xr.broadcast(*args))
+    # args = list(xr.broadcast(*args))
     a0 = args[0]
     a_dims = a0.dims
     a_coords = a0.coords
@@ -130,21 +138,28 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
         dims_to_keep = []
         axis = None
 
-    h_data = _histogram(*args_data, weights=weights_data, bins=bins, axis=axis,
-                        density=density, block_size=block_size)
+    h_data = _histogram(
+        *args_data,
+        weights=weights_data,
+        bins=bins,
+        axis=axis,
+        density=density,
+        block_size=block_size
+    )
 
     # create output dims
     new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
     output_dims = dims_to_keep + new_dims
 
     # create new coords
-    bin_centers = [0.5*(bin[:-1] + bin[1:]) for bin in bins]
-    new_coords = {name: ((name,), bin_center, a.attrs)
-                  for name, bin_center, a in zip(new_dims, bin_centers, args)}
+    bin_centers = [0.5 * (bin[:-1] + bin[1:]) for bin in bins]
+    new_coords = {
+        name: ((name,), bin_center, a.attrs)
+        for name, bin_center, a in zip(new_dims, bin_centers, args)
+    }
 
     # old coords associated with dims
-    old_dim_coords = {name: a0[name]
-                  for name in dims_to_keep if name in a_coords}
+    old_dim_coords = {name: a0[name] for name in dims_to_keep if name in a_coords}
 
     all_coords = {}
     all_coords.update(old_dim_coords)
@@ -160,13 +175,14 @@ def histogram(*args, bins=None, dim=None, weights=None, density=False,
     # However, they require introduction of an additional dimension.
     # I don't like that.
     edge_dims = [a.name + bin_edge_suffix for a in args[:N_args]]
-    edge_coords = {name: ((name,), bin_edge, a.attrs)
-                  for name, bin_edge, a in zip(edge_dims, bins, args)}
+    edge_coords = {
+        name: ((name,), bin_edge, a.attrs)
+        for name, bin_edge, a in zip(edge_dims, bins, args)
+    }
 
-    output_name = '_'.join(['histogram'] + [a.name for a in args[:N_args]])
+    output_name = "_".join(["histogram"] + [a.name for a in args[:N_args]])
 
-    da_out = xr.DataArray(h_data, dims=output_dims, coords=all_coords,
-                          name=output_name)
+    da_out = xr.DataArray(h_data, dims=output_dims, coords=all_coords, name=output_name)
 
     if density:
         # correct for overcounting the bins which weren't histogrammed along
