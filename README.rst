@@ -1,7 +1,7 @@
 xhistogram: Fast, flexible, label-aware histograms for numpy and xarray
 =======================================================================
 
-|pypi| |conda forge| |Build Status| |codecov| |docs| |license|
+|pypi| |conda forge| |Build Status| |codecov| |docs| |linting| |license|
 
 For more information, including installation instructions, read the full
 `xhistogram documentation`_.
@@ -28,6 +28,9 @@ For more information, including installation instructions, read the full
 .. |docs| image:: http://readthedocs.org/projects/xhistogram/badge/?version=latest
    :target: http://xhistogram.readthedocs.org/en/stable/?badge=latest
    :alt: documentation status
+.. |linting| image:: [![Linting](https://github.com/xgcm/xhistogram/actions/workflows/linting.yml/badge.svg
+   :target: https://github.com/xgcm/xhistogram/actions/workflows/linting.yml
+   :alt: linting status
 .. |license| image:: https://img.shields.io/github/license/mashape/apistatus.svg
    :target: https://github.com/xgcm/xhistogram
    :alt: license
