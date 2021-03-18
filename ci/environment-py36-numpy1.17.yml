@@ -9,7 +9,7 @@ dependencies:
   # should remove the dask version pinning below.
   # see https://github.com/dask/dask/pull/7391
   # and https://github.com/xgcm/xhistogram/issues/27
-  - dask<2021.3.0
+  - dask!=2021.3.0
   - numpy==1.17
   - pytest
   - pip
