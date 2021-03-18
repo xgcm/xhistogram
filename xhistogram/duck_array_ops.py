@@ -2,7 +2,6 @@
 Shamelessly copied from xarray."""
 
 import numpy as np
-from functools import reduce
 
 try:
     import dask.array as dsa

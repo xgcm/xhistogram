@@ -2,7 +2,6 @@ import xarray as xr
 import numpy as np
 import pytest
 import pandas as pd
-from functools import reduce
 from itertools import combinations
 
 from ..xarray import histogram

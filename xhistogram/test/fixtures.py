@@ -1,6 +1,5 @@
 import dask
 import dask.array as dsa
-import numpy as np
 
 
 def empty_dask_array(shape, dtype=float, chunks=None):

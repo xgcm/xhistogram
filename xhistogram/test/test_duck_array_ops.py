@@ -1,5 +1,4 @@
 import numpy as np
-import dask
 import dask.array as dsa
 from ..duck_array_ops import (
     digitize,

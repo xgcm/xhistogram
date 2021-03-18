@@ -104,7 +104,6 @@ def histogram(
     # what happens if we skip this?
     # args = list(xr.broadcast(*args))
     a0 = args[0]
-    a_dims = a0.dims
     a_coords = a0.coords
 
     # roll our own broadcasting
@@ -169,16 +168,6 @@ def histogram(
         for c in a_coords:
             if c not in all_coords and set(a0[c].dims).issubset(output_dims):
                 all_coords[c] = a0[c]
-
-    # CF conventions tell us how to specify cell boundaries
-    # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#cell-boundaries
-    # However, they require introduction of an additional dimension.
-    # I don't like that.
-    edge_dims = [a.name + bin_edge_suffix for a in args[:N_args]]
-    edge_coords = {
-        name: ((name,), bin_edge, a.attrs)
-        for name, bin_edge, a in zip(edge_dims, bins, args)
-    }
 
     output_name = "_".join(["histogram"] + [a.name for a in args[:N_args]])
 
