@@ -1,0 +1,11 @@
+name: xhistogram_test_env
+dependencies:
+  - python=3.8
+  - numpy
+  - pytest
+  - pip
+  - pip:
+    - git+https://github.com/dask/dask.git
+    - git+https://github.com/pydata/xarray.git
+    - codecov
+    - pytest-cov
