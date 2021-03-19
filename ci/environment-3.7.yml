@@ -1,6 +1,6 @@
 name: xhistogram_test_env
 dependencies:
-  - python=3.6
+  - python=3.7
   - xarray
   # Dask 2021.3.0 introduced a regression which broke xhistogram.
   # This regression should be fixed in the next Dask release and we
@@ -8,7 +8,7 @@ dependencies:
   # see https://github.com/dask/dask/pull/7391
   # and https://github.com/xgcm/xhistogram/issues/27
   - dask!=2021.3.0
-  - numpy
+  - numpy=1.17
   - pytest
   - pip
   - pip:
