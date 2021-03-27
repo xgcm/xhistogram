@@ -1,6 +1,6 @@
 name: xhistogram_test_env
 dependencies:
-  - python=3.6
+  - python=3.9
   - xarray
   - netcdf4
   - numpy>=1.16

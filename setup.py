@@ -14,12 +14,14 @@ CLASSIFIERS = [
     "Intended Audience :: Science/Research",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "Topic :: Scientific/Engineering",
 ]
 
 INSTALL_REQUIRES = ["xarray>=0.12.0", "dask", "numpy>=1.16"]
-PYTHON_REQUIRES = ">=3.6"
+PYTHON_REQUIRES = ">=3.7"
 
 DESCRIPTION = "Fast, flexible, label-aware histograms for numpy and xarray"
 
