@@ -3,15 +3,141 @@ Contributor Guide
 
 This package is in very early stages. Lots of work is needed.
 
-GitHub repo: `https://github.com/xgcm/xhistogram <https://github.com/xgcm/xhistogram>`_
+You can help out just by using ``xhistogram`` and reporting
+`issues <https://github.com/xgcm/xhistogram/issues>`__.
+
+The following sections cover some general guidelines for maintainers and
+contributors wanting to help develop ``xhistogram``.
+
+
+Feature requests, suggestions and bug reports
+---------------------------------------------
+
+We are eager to hear about any bugs you have found, new features you
+would like to see and any other suggestions you may have. Please feel
+free to submit these as `issues <https://github.com/xgcm/xhistogram/issues>`__.
+
+When suggesting features, please make sure to explain in detail how
+the proposed feature should work and to keep the scope as narrow as
+possible. This makes features easier to implement in small PRs.
+
+When report bugs, please include:
+
+* Any details about your local setup that might be helpful in
+  troubleshooting, specifically the Python interpreter version, installed
+  libraries, and ``xhistogram`` version.
+* Detailed steps to reproduce the bug, ideally a `Minimal, Complete and
+  Verifiable Example <http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports>`__.
+* If possible, a demonstration test that currently fails but should pass
+  when the bug is fixed.
+
+
+Write documentation
+-------------------
+Adding documentation is always helpful. This may include:
+
+* More complementary documentation. Have you perhaps found something unclear?
+* Docstrings.
+* Example notebooks of ``xhistogram`` being used in real analyses.
+
+The ``xhistogram`` documentation is written in reStructuredText. You
+can follow the conventions in already written documents. Some helpful guides
+can be found
+`here <http://docutils.sourceforge.net/docs/user/rst/quickref.html>`__ and
+`here <https://github.com/ralsina/rst-cheatsheet/blob/master/rst-cheatsheet.rst>`__.
+
+When writing and editing documentation, it can be useful to see the resulting
+build without having to push to Github. You can build the documentation locally
+by running::
+
+    $ # Install the packages required to build the docs in a conda environment
+    $ conda env update -f doc/environment.yml
+    $ conda activate xhistogram_doc_env
+    $ # Install the latest xhistogram
+    $ pip install --no-deps .
+    $ cd doc/
+    $ make html
+
+This will build the documentation locally in ``doc/_build/``. You can view the
+html files, for example, by running::
+
+    $ xdg-open _build/html/index.html
+
+To lint the reStructuredText documentation files (to do this you will need to
+install `doc8 <https://github.com/PyCQA/doc8>`__), run::
+
+    $ doc8 doc/*.rst
+
+
+Preparing Pull Requests
+-----------------------
+#. Fork the
+   `xhistogram GitHub repository <https://github.com/xgcm/xhistogram>`__.  It's
+   fine to use ``xhistogram`` as your fork repository name because it will live
+   under your username.
+
+#. Clone your fork locally, connect your repository to the upstream (main
+   project), and create a branch to work on::
+
+    $ git clone git@github.com:YOUR_GITHUB_USERNAME/xhistogram.git
+    $ cd xhistogram
+    $ git remote add upstream git@github.com:xgcm/xhistogram.git
+    $ git checkout -b your-bugfix-feature-branch-name master
+
+   If you need some help with Git, follow
+   `this quick start guide <https://git.wiki.kernel.org/index.php/QuickStart>`__
+
+#. Install dependencies into a new conda environment::
+
+    $ conda env update -f ci/environment-3.9.yml
+    $ conda activate xhistogram_test_env
+
+#. Install xhistogram using the editable flag (meaning any changes you make to
+   the package will be reflected directly in your environment)::
+
+    $ pip install --no-deps -e .
+
+#. Break your edits up into reasonably sized commits::
+
+    $ git commit -a -m "<commit message>"
+    $ git push -u
+
+   It can be useful to manually run `pre-commit <https://pre-commit.com>`_ as you
+   make your edits. This will mean your code is more likely to pass the CI tests
+   when you push it::
+
+    $ pip install pre-commit # you only need to do this once
+    $ pre-commit run --all-files
+
+#. Run the tests (including those you add to test your edits!)::
+
+    $ pytest xhistogram
+
+   You can also test that your contribution and tests increased the test coverage::
+
+    $ coverage run --source xhistogram -m py.test
+    $ coverage report
+
+#. Add a new entry describing your contribution to the :ref:`release-history`
+   in ``doc/contributing.rst``. Please try to follow the format of the existing
+   entries.
+
+#. Submit a pull request through the GitHub `website <https://github.com/xgcm/xhistogram>`__.
+
+   Note that you can create the Pull Request while you're working on your PR.
+   The PR will update as you add more commits. ``xhistogram`` developers and
+   contributors can then review your code and offer suggestions.
+
+
+.. _release-history:
 
 Release History
 ---------------
 
-v0.1.?
-~~~~~
+v0.1.2
+~~~~~~
 
-- Aligned definition of `bins` with `numpy.histogram` (:pr:`???`)
+- Aligned definition of ``bins`` with ``numpy.histogram`` :issue:`18`
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 
 v0.1.1

@@ -1,4 +1,4 @@
-name: xhistogram_test_env
+name: xhistogram_doc_env
 dependencies:
   - python=3.6
   - xarray
@@ -14,5 +14,6 @@ dependencies:
   - pandoc
   - pip
   - pip:
+    - doc8
     - nbsphinx
     - sphinx_rtd_theme
