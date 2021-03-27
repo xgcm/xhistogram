@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.7
-  - xarray=0.12.0
+  - xarray
   # Dask 2021.3.0 introduced a regression which broke xhistogram.
   # This regression should be fixed in the next Dask release and we
   # should remove the dask version pinning below.
