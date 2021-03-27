@@ -63,8 +63,7 @@ html files, for example, by running::
 
     $ xdg-open _build/html/index.html
 
-To lint the reStructuredText documentation files (to do this you will need to
-install `doc8 <https://github.com/PyCQA/doc8>`__), run::
+To lint the reStructuredText documentation files run::
 
     $ doc8 doc/*.rst
 
