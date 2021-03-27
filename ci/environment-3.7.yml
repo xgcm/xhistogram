@@ -13,4 +13,5 @@ dependencies:
   - pip
   - pip:
     - codecov
+    - mypy==0.812
     - pytest-cov
