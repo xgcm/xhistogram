@@ -106,7 +106,7 @@ Preparing Pull Requests
    make your edits. This will mean your code is more likely to pass the CI tests
    when you push it::
 
-    $ pip install pre-commit # you only need to do this once
+    $ pip install pre_commit # you only need to do this once
     $ pre-commit run --all-files
 
 #. Run the tests (including those you add to test your edits!)::
