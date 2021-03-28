@@ -54,7 +54,7 @@ by running::
     $ conda env update -f doc/environment.yml
     $ conda activate xhistogram_doc_env
     $ # Install the latest xhistogram
-    $ pip install --no-deps .
+    $ pip install --no-deps -e .
     $ cd doc/
     $ make html
 
