@@ -13,7 +13,7 @@ dependencies:
   - ipykernel
   - pandoc
   - pip
+  - doc8
   - pip:
-    - doc8
     - nbsphinx
     - sphinx_rtd_theme
