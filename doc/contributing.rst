@@ -51,15 +51,16 @@ build without having to push to Github. You can build the documentation locally
 by running::
 
     $ # Install the packages required to build the docs in a conda environment
-    $ conda env update -f doc/environment.yml
+    $ conda env create -f doc/environment.yml
     $ conda activate xhistogram_doc_env
     $ # Install the latest xhistogram
     $ pip install --no-deps .
     $ cd doc/
     $ make html
 
-This will build the documentation locally in ``doc/_build/``. You can view the
-html files, for example, by running::
+This will build the documentation locally in ``doc/_build/``. You can then open
+``_build/html/index.html`` in your web browser to view the documentation. For
+example, if you have ``xdg-open`` installed::
 
     $ xdg-open _build/html/index.html
 
@@ -88,7 +89,7 @@ Preparing Pull Requests
 
 #. Install dependencies into a new conda environment::
 
-    $ conda env update -f ci/environment-3.9.yml
+    $ conda env create -f ci/environment-3.9.yml
     $ conda activate xhistogram_test_env
 
 #. Install xhistogram using the editable flag (meaning any changes you make to
@@ -96,14 +97,20 @@ Preparing Pull Requests
 
     $ pip install --no-deps -e .
 
+#. Start making your edits. Please try to type annotate your additions as
+   much as possible. Adding type annotations to existing unannotated code is
+   also very welcome. You can read about Python typing
+   `here <https://mypy.readthedocs.io/en/stable/getting_started.html#function-signatures-and-dynamic-vs-static-typing>`__.
+
 #. Break your edits up into reasonably sized commits::
 
     $ git commit -a -m "<commit message>"
     $ git push -u
 
    It can be useful to manually run `pre-commit <https://pre-commit.com>`_ as you
-   make your edits. This will mean your code is more likely to pass the CI tests
-   when you push it::
+   make your edits. ``pre-commit`` will run checks on the format and typing of
+   your code and will show you where you need to make changes. This will mean
+   your code is more likely to pass the CI checks when you push it::
 
     $ pip install pre_commit # you only need to do this once
     $ pre-commit run --all-files
