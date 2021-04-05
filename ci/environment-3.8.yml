@@ -1,4 +1,6 @@
 name: xhistogram_test_env
+channels:
+  - conda-forge
 dependencies:
   - python=3.8
   - xarray
@@ -8,7 +10,7 @@ dependencies:
   # see https://github.com/dask/dask/pull/7391
   # and https://github.com/xgcm/xhistogram/issues/27
   - dask!=2021.3.0
-  - numpy
+  - numpy=1.18
   - pytest
   - pip
   - pip:
