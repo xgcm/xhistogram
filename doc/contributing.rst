@@ -147,6 +147,8 @@ v0.1.4
   By `James Bourbeau <https://github.com/jrbourbeau>`_.
 - Add documentation for contributors.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Add type checking with mypy :issue:`32`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
 
 v0.1.3
 ~~~~~~
