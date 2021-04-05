@@ -140,10 +140,24 @@ Preparing Pull Requests
 Release History
 ---------------
 
+v0.1.4
+~~~~~~
+
+- Move CI to GitHub actions :issue:`32`.
+  By `James Bourbeau <https://github.com/jrbourbeau>`_.
+- Add documentation for contributors.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+
+v0.1.3
+~~~~~~
+
+- Update dependencies to exclude incompatible dask version :issue:`27`.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
 v0.1.2
 ~~~~~~
 
-- Aligned definition of ``bins`` with ``numpy.histogram`` :issue:`18`
+- Aligned definition of ``bins`` with ``numpy.histogram`` :issue:`18`.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 
 v0.1.1
