@@ -5,7 +5,7 @@ dependencies:
   - python=3.8
   - xarray
   - dask
-  - numpy
+  - numpy=1.18
   - pytest
   - pip
   - pip:
