@@ -6,6 +6,7 @@ Numpy API for xhistogram.
 import numpy as np
 from functools import reduce
 from .duck_array_ops import (
+    where,
     digitize,
     bincount,
     reshape,
@@ -108,24 +109,22 @@ def _histogram_2d_vectorized(
     nbins = [len(b) for b in bins]
     hist_shapes = [nb + 1 for nb in nbins]
 
-    # a marginally faster implementation would be to use searchsorted,
-    # like numpy histogram itself does
-    # https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L864-L882
-    # for now we stick with `digitize` because it's easy to understand how it works
-
-    # Add small increment to the last bin edge to make the final bin right-edge inclusive
-    # Note, this is the approach taken by sklearn, e.g.
-    # https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/calibration.py#L592
-    # but a better approach would be to use something like _search_sorted_inclusive() in
-    # numpy histogram. This is an additional motivation for moving to searchsorted
-    bins = [np.concatenate((b[:-1], b[-1:] + 1e-8)) for b in bins]
-
-    # the maximum possible value of of digitize is nbins
-    # for right=False:
+    # The maximum possible value of of digitize is nbins
+    # for _digitize_inclusive:
     #   - 0 corresponds to a < b[0]
-    #   - i corresponds to bins[i-1] <= a < b[i]
-    #   - nbins corresponds to a a >= b[1]
-    each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
+    #   - i corresponds to b[i-1] <= a < b[i]
+    #   - nbins-1 corresponds to b[-2] <= a <= b[-1]
+    #   - nbins corresponds to a >= b[-1]
+    def _digitize_inclusive(a, b):
+        """Like `digitize`, but where the last bin is also right-edge inclusive."""
+        # Similar to implementation in np.histogramdd
+        # see https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L1056
+        bin_indices = digitize(a, b)
+        on_edge = a == b[-1]
+        # Need to use `where` here rather the simple indexing for dask compatibility
+        return where(on_edge, bin_indices - 1, bin_indices)
+
+    each_bin_indices = [_digitize_inclusive(a, b) for a, b in zip(args, bins)]
     # product of the bins gives the joint distribution
     if N_inputs > 1:
         bin_indices = ravel_multi_index(each_bin_indices, hist_shapes)

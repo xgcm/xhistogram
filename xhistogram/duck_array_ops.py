@@ -31,6 +31,7 @@ def _dask_or_eager_func(name, eager_module=np, list_of_args=False, n_array_args=
     return f
 
 
+where = _dask_or_eager_func("where")
 digitize = _dask_or_eager_func("digitize")
 bincount = _dask_or_eager_func("bincount")
 reshape = _dask_or_eager_func("reshape")
