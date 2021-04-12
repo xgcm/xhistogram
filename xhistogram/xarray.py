@@ -19,8 +19,7 @@ def histogram(
     density=False,
     block_size="auto",
     keep_coords=False,
-    bin_dim_suffix="_bin",
-    bin_edge_suffix="_bin_edge"
+    bin_dim_suffix="_bin"
 ):
     """Histogram applied along specified dimensions.
 
@@ -87,6 +86,9 @@ def histogram(
         chunks (dask inputs) or an experimental built-in heuristic (numpy inputs).
     keep_coords : bool, optional
         If ``True``, keep all coordinates. Default: ``False``
+    bin_dim_suffix : str, optional
+        Suffix to append to input arg names to define names of output bin
+        dimensions
 
     Returns
     -------
