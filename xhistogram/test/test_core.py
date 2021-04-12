@@ -271,6 +271,7 @@ def test_ensure_correctly_formatted_bins(in_out):
         (range_, 1, [range_]),  # ( range_in, n_args, range_out )
         (range_, 2, [range_, range_]),
         ([range_, range_], 2, [range_, range_]),
+        ([(range_[0],)], 1, None),
         ([range_], 2, None),
         ([range_, range_], 1, None),
     ],
@@ -283,4 +284,4 @@ def test_ensure_correctly_formatted_range(in_out):
         assert range_ == range_expected
     else:
         with pytest.raises(ValueError):
-            _ensure_correctly_formatted_bins(range_in, n)
+            _ensure_correctly_formatted_range(range_in, n)
