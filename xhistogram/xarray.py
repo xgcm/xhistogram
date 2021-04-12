@@ -90,8 +90,9 @@ def histogram(
 
     Returns
     -------
-    hist : array
-        The values of the histogram.
+    hist : xarray.DataArray
+        The values of the histogram. For each bin, the midpoint of the bin edges
+        is given along the bin coordinates.
 
     """
 
