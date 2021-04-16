@@ -52,7 +52,8 @@ def histogram(
         `a` only contributes its associated weight towards the bin count
         (instead of 1). If `density` is True, the weights are
         normalized, so that the integral of the density over the range
-        remains 1.
+        remains 1. NaNs in the weights input will fill the entire bin with 
+        NaNs. If there are NaNs in the weight input call ``.fillna(0.)``. 
     density : bool, optional
         If ``False``, the result will contain the number of samples in
         each bin. If ``True``, the result is the value of the
