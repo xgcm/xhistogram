@@ -54,7 +54,7 @@ def histogram(
         normalized, so that the integral of the density over the range
         remains 1. NaNs in the weights input will fill the entire bin with 
         NaNs. If there are NaNs in the weights input call ``.fillna(0.)``
-        before running ``histogram()``. 
+        before running ``histogram()``.. 
     density : bool, optional
         If ``False``, the result will contain the number of samples in
         each bin. If ``True``, the result is the value of the
