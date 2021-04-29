@@ -5,7 +5,7 @@ Numpy API for xhistogram.
 
 import numpy as np
 from functools import reduce
-from .duck_array_ops import (
+from numpy import (
     digitize,
     bincount,
     reshape,
@@ -146,6 +146,59 @@ def _histogram_2d_vectorized(
     return bin_counts
 
 
+def _actual_histogram(all_arrays, weights, axis, bins, density):
+
+    all_arrays_broadcast = broadcast_arrays(*all_arrays)
+    a0 = all_arrays_broadcast[0]
+    ndim = a0.ndim
+
+    do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
+    if do_full_array:
+        kept_axes_shape = None
+    else:
+        kept_axes_shape = tuple([a0.shape[i] for i in range(a0.ndim) if i not in axis])
+
+    def reshape_input(a):
+        if do_full_array:
+            d = a.ravel()[None, :]
+        else:
+            # reshape the array to 2D
+            # axis 0: preserved axis after histogram
+            # axis 1: calculate histogram along this axis
+            new_pos = tuple(range(-len(axis), 0))
+            c = np.moveaxis(a, axis, new_pos)
+            split_idx = c.ndim - len(axis)
+            dims_0 = c.shape[:split_idx]
+            assert dims_0 == kept_axes_shape
+            dims_1 = c.shape[split_idx:]
+            new_dim_0 = np.prod(dims_0)
+            new_dim_1 = np.prod(dims_1)
+            d = reshape(c, (new_dim_0, new_dim_1))
+        return d
+
+    all_arrays_reshaped = [reshape_input(a) for a in all_arrays_broadcast]
+
+    if weights is not None:
+        weights_reshaped = all_arrays_reshaped.pop()
+    else:
+        weights_reshaped = None
+
+    bin_counts = _histogram_2d_vectorized(
+        *all_arrays_reshaped,
+        bins=bins,
+        weights=weights_reshaped,
+        density=density
+    )
+
+    if bin_counts.shape[0] == 1:
+        assert do_full_array
+        bin_counts = bin_counts.squeeze()
+    else:
+        final_shape = kept_axes_shape + bin_counts.shape[1:]
+        bin_counts = reshape(bin_counts, final_shape)
+
+    return bin_counts
+
 def histogram(
     *args, bins=None, axis=None, weights=None, density=False, block_size="auto"
 ):
@@ -222,54 +275,15 @@ def histogram(
                 ax_positive = ndim + ax
             assert ax_positive < ndim, "axis must be less than ndim"
             axis_normed.append(ax_positive)
-        axis = np.atleast_1d(axis_normed)
+        axis = [int(i) for i in axis_normed]
 
-    do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
-    if do_full_array:
-        kept_axes_shape = None
-    else:
-        kept_axes_shape = tuple([a0.shape[i] for i in range(a0.ndim) if i not in axis])
+    all_arrays = list(args)
 
-    all_args = list(args)
-    if weights is not None:
-        all_args += [weights]
-    all_args_broadcast = broadcast_arrays(*all_args)
-
-    def reshape_input(a):
-        if do_full_array:
-            d = a.ravel()[None, :]
-        else:
-            # reshape the array to 2D
-            # axis 0: preserved axis after histogram
-            # axis 1: calculate histogram along this axis
-            new_pos = tuple(range(-len(axis), 0))
-            c = np.moveaxis(a, axis, new_pos)
-            split_idx = c.ndim - len(axis)
-            dims_0 = c.shape[:split_idx]
-            assert dims_0 == kept_axes_shape
-            dims_1 = c.shape[split_idx:]
-            new_dim_0 = np.prod(dims_0)
-            new_dim_1 = np.prod(dims_1)
-            d = reshape(c, (new_dim_0, new_dim_1))
-        return d
-
-    all_args_reshaped = [reshape_input(a) for a in all_args_broadcast]
-
-    if weights is not None:
-        weights_reshaped = all_args_reshaped.pop()
-    else:
-        weights_reshaped = None
-
-    n_inputs = len(all_args_reshaped)
+    n_inputs = len(all_arrays)
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
-    bin_counts = _histogram_2d_vectorized(
-        *all_args_reshaped,
-        bins=bins,
-        weights=weights_reshaped,
-        density=density,
-        block_size=block_size,
-    )
+    print(axis)
+    bin_counts = _actual_histogram(all_arrays, weights, axis, bins, density)
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the
@@ -286,12 +300,5 @@ def histogram(
         h = bin_counts / bin_areas / bin_counts.sum()
     else:
         h = bin_counts
-
-    if h.shape[0] == 1:
-        assert do_full_array
-        h = h.squeeze()
-    else:
-        final_shape = kept_axes_shape + h.shape[1:]
-        h = reshape(h, final_shape)
 
     return h
