@@ -13,7 +13,7 @@ from numpy import (
     concatenate,
     broadcast_arrays,
 )
-
+from .duck_array_ops import _any_dask_array
 
 def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
     if len(bins) == N_expected:
@@ -88,7 +88,7 @@ def _dispatch_bincount(bin_indices, weights, N, hist_shapes, block_size=None):
         return _bincount_loop(bin_indices, weights, N, hist_shapes, block_chunks)
 
 
-def _histogram_2d_vectorized(
+def _bincount_2d_vectorized(
     *args, bins=None, weights=None, density=False, right=False, block_size=None
 ):
     """Calculate the histogram independently on each row of a 2D array"""
@@ -146,7 +146,7 @@ def _histogram_2d_vectorized(
     return bin_counts
 
 
-def _actual_histogram(all_arrays, weights, axis, bins, density):
+def _bincount(all_arrays, weights, axis, bins, density):
 
     if weights is not None:
         all_arrays.append(weights)
@@ -191,7 +191,7 @@ def _actual_histogram(all_arrays, weights, axis, bins, density):
     else:
         weights_reshaped = None
 
-    bin_counts = _histogram_2d_vectorized(
+    bin_counts = _bincount_2d_vectorized(
         *all_arrays_reshaped,
         bins=bins,
         weights=weights_reshaped,
@@ -290,7 +290,27 @@ def histogram(
     n_inputs = len(all_arrays)
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
-    bin_counts = _actual_histogram(all_arrays, weights, axis, bins, density)
+    if _any_dask_array(weights, *all_arrays):
+        raise NotImplementedError("No dask allowed for now")
+        # We should be able to just apply the bin_count function to every
+        # block and then sum over all blocks to get the total bin count.
+        # The main challenge is to figure out the chunk shape that will come
+        # out of _bincount. We might also need to add dummy dimensions to sum
+        # over in the _bincount function
+        import dask.array as dsa
+        bin_counts = dsa.map_blocks(
+            _bincount,
+            all_arrays, weights, axis, bins, density,
+            drop_axis=axis,
+            new_axis="what?",
+            chunks="what?",
+            meta=np.array((), dtype=np.int64)
+        )
+        # sum over the block dims
+        block_dims = "?"
+        bin_counts = bin_counts.sum(block_dims)
+    else:
+        bin_counts = _bincount(all_arrays, weights, axis, bins, density)
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the

@@ -10,6 +10,12 @@ try:
 except ImportError:
     has_dask = False
 
+def _any_dask_array(*args):
+    if not has_dask:
+        return False
+    else:
+        import dask.array as dsa
+        return any([isinstance(a, dsa.core.Array) for a in args])
 
 def _dask_or_eager_func(name, eager_module=np, list_of_args=False, n_array_args=1):
     """Create a function that dispatches to dask for dask array inputs."""
