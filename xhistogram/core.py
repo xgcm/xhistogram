@@ -159,7 +159,6 @@ def _bincount(all_arrays, weights, axis, bins, density):
     else:
         weights_broadcast = None
     a0 = all_arrays_broadcast[0]
-    ndim = a0.ndim
 
     do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
     if do_full_array:
