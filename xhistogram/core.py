@@ -148,7 +148,15 @@ def _histogram_2d_vectorized(
 
 def _actual_histogram(all_arrays, weights, axis, bins, density):
 
+    if weights is not None:
+        all_arrays.append(weights)
+
     all_arrays_broadcast = broadcast_arrays(*all_arrays)
+
+    if weights is not None:
+        weights_broadcast = all_arrays_broadcast.pop()
+    else:
+        weights_broadcast = None
     a0 = all_arrays_broadcast[0]
     ndim = a0.ndim
 
@@ -178,8 +186,8 @@ def _actual_histogram(all_arrays, weights, axis, bins, density):
 
     all_arrays_reshaped = [reshape_input(a) for a in all_arrays_broadcast]
 
-    if weights is not None:
-        weights_reshaped = all_arrays_reshaped.pop()
+    if weights_broadcast is not None:
+        weights_reshaped = reshape_input(weights_broadcast)
     else:
         weights_reshaped = None
 
@@ -282,7 +290,6 @@ def histogram(
     n_inputs = len(all_arrays)
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
-    print(axis)
     bin_counts = _actual_histogram(all_arrays, weights, axis, bins, density)
 
     if density:
