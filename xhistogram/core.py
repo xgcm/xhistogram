@@ -15,6 +15,7 @@ from numpy import (
 )
 from .duck_array_ops import _any_dask_array
 
+
 def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
     if len(bins) == N_expected:
         return bins
@@ -192,10 +193,7 @@ def _bincount(all_arrays, weights, axis, bins, density):
         weights_reshaped = None
 
     bin_counts = _bincount_2d_vectorized(
-        *all_arrays_reshaped,
-        bins=bins,
-        weights=weights_reshaped,
-        density=density
+        *all_arrays_reshaped, bins=bins, weights=weights_reshaped, density=density
     )
 
     if bin_counts.shape[0] == 1:
@@ -206,6 +204,7 @@ def _bincount(all_arrays, weights, axis, bins, density):
         bin_counts = reshape(bin_counts, final_shape)
 
     return bin_counts
+
 
 def histogram(
     *args, bins=None, axis=None, weights=None, density=False, block_size="auto"
@@ -298,13 +297,18 @@ def histogram(
         # out of _bincount. We might also need to add dummy dimensions to sum
         # over in the _bincount function
         import dask.array as dsa
+
         bin_counts = dsa.map_blocks(
             _bincount,
-            all_arrays, weights, axis, bins, density,
+            all_arrays,
+            weights,
+            axis,
+            bins,
+            density,
             drop_axis=axis,
             new_axis="what?",
             chunks="what?",
-            meta=np.array((), dtype=np.int64)
+            meta=np.array((), dtype=np.int64),
         )
         # sum over the block dims
         block_dims = "?"
