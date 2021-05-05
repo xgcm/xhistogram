@@ -12,12 +12,16 @@ import pytest
 @pytest.mark.parametrize("density", [False, True])
 @pytest.mark.parametrize("block_size", [None, 1, 2])
 @pytest.mark.parametrize("axis", [1, None])
-def test_histogram_results_1d(block_size, density, axis):
+@pytest.mark.parametrize("add_nans", [False, True])
+def test_histogram_results_1d(block_size, density, axis, add_nans):
     nrows, ncols = 5, 20
     # Setting the random seed here prevents np.testing.assert_allclose
     # from failing beow. We should investigate this further.
     np.random.seed(2)
     data = np.random.randn(nrows, ncols)
+    if add_nans:
+        N_nans = 20
+        data.ravel()[np.random.choice(data.size, N_nans, replace=False)] = np.nan
     bins = np.linspace(-4, 4, 10)
 
     h = histogram(data, bins=bins, axis=axis, block_size=block_size, density=density)
@@ -100,10 +104,15 @@ def test_histogram_results_2d():
     np.testing.assert_array_equal(hist, h)
 
 
-def test_histogram_results_2d_density():
+@pytest.mark.parametrize("add_nans", [False, True])
+def test_histogram_results_2d_density(add_nans):
     nrows, ncols = 5, 20
     data_a = np.random.randn(nrows, ncols)
     data_b = np.random.randn(nrows, ncols)
+    if add_nans:
+        N_nans = 20
+        data_a.ravel()[np.random.choice(data_a.size, N_nans, replace=False)] = np.nan
+        data_b.ravel()[np.random.choice(data_b.size, N_nans, replace=False)] = np.nan
     nbins_a = 9
     bins_a = np.linspace(-4, 4, nbins_a + 1)
     nbins_b = 10
@@ -125,11 +134,17 @@ def test_histogram_results_2d_density():
     np.testing.assert_allclose(integral, 1.0)
 
 
-def test_histogram_results_3d_density():
+@pytest.mark.parametrize("add_nans", [False, True])
+def test_histogram_results_3d_density(add_nans):
     nrows, ncols = 5, 20
     data_a = np.random.randn(nrows, ncols)
     data_b = np.random.randn(nrows, ncols)
     data_c = np.random.randn(nrows, ncols)
+    if add_nans:
+        N_nans = 20
+        data_a.ravel()[np.random.choice(data_a.size, N_nans, replace=False)] = np.nan
+        data_b.ravel()[np.random.choice(data_b.size, N_nans, replace=False)] = np.nan
+        data_c.ravel()[np.random.choice(data_c.size, N_nans, replace=False)] = np.nan
     nbins_a = 9
     bins_a = np.linspace(-4, 4, nbins_a + 1)
     nbins_b = 10

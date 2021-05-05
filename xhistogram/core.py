@@ -287,7 +287,9 @@ def histogram(
         # of the original data
         bin_axes = tuple(range(1, bin_counts.ndim))
         count_sums = bin_counts.sum(axis=bin_axes)
-        count_sums_shape = (bin_counts.shape[0],) + len(bin_axes)*(1,) # for broadcasting
+        count_sums_shape = (bin_counts.shape[0],) + len(bin_axes) * (
+            1,
+        )  # for broadcasting
         h = bin_counts / bin_areas / reshape(count_sums, count_sums_shape)
     else:
         h = bin_counts
