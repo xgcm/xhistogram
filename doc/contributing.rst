@@ -141,7 +141,7 @@ Release History
 ---------------
 
 v0.1.4 (Not yet released)
-~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 - Fixed bug with density calculation when NaNs are present :issue:`51`.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 - Added documentation on how to deal with NaNs in weights :issue:`26`.
