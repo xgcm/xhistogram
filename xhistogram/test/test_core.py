@@ -203,16 +203,3 @@ def test_histogram_shape(use_dask, block_size):
         assert c.shape == expected_shape
         if use_dask:
             assert isinstance(c, dsa.Array)
-
-
-# Future warning for https://github.com/xgcm/xhistogram/pull/45
-def test_warnings():
-    with warnings.catch_warnings(record=True) as w:
-        # Cause all warnings to always be triggered.
-        warnings.simplefilter("always")
-        nrows, ncols = 5, 20
-        data = np.random.randn(nrows, ncols)
-        bins = np.linspace(-4, 4, 10)
-        histogram(data, bins=bins)
-        assert len(w) == 1
-        assert issubclass(w[-1].category, FutureWarning)
