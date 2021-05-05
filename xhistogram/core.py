@@ -283,7 +283,7 @@ def histogram(
             # Slower, but N-dimensional logic
             bin_areas = np.prod(np.ix_(*bin_widths))
 
-        h = bin_counts / bin_areas / bin_counts.sum()
+        h = h = bin_counts / bin_areas / bin_counts.sum(axis=1)[..., np.newaxis]
     else:
         h = bin_counts
 
