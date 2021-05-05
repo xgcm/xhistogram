@@ -7,7 +7,6 @@ from ..core import histogram
 from .fixtures import empty_dask_array
 
 import pytest
-import warnings
 
 
 @pytest.mark.parametrize("density", [False, True])
