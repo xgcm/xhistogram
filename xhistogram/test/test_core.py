@@ -32,12 +32,11 @@ def test_histogram_results_1d(block_size, density, axis):
         )
     else:
         expected = np.histogram(data, bins=bins, density=density)[0]
-    norm = nrows if (density and axis) else 1
-    np.testing.assert_allclose(h, expected / norm)
+    np.testing.assert_allclose(h, expected)
 
     if density:
         widths = np.diff(bins)
-        integral = np.sum(h * widths)
+        integral = np.sum(h * widths, axis)
         np.testing.assert_allclose(integral, 1.0)
 
 
