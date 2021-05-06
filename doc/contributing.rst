@@ -140,9 +140,13 @@ Preparing Pull Requests
 Release History
 ---------------
 
-v0.1.4
+v0.2.0
 ~~~~~~
 
+- Added FutureWarning for upcoming changes to core API :issue:`13`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Added documentation on how to deal with NaNs in weights :issue:`26`.
+  By `Shanice Bailey <https://github.com/stb2145>`_.
 - Move CI to GitHub actions :issue:`32`.
   By `James Bourbeau <https://github.com/jrbourbeau>`_.
 - Add documentation for contributors.
