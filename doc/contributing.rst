@@ -140,7 +140,7 @@ Preparing Pull Requests
 Release History
 ---------------
 
-v0.2.0 (not yet released)
+v0.2.1 (not yet released)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 - Implemented various options for users for providing bins to
   xhistogram that mimic the numpy histogram API. This included
