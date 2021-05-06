@@ -358,7 +358,7 @@ def histogram(
 
         # Sum over all but the first axis, which contains all preserved axes
         # of the original data
-        bin_axes = tuple(range(1, bin_counts.ndim))
+        bin_axes = tuple(_range(1, bin_counts.ndim))
         count_sums = bin_counts.sum(axis=bin_axes)
         count_sums_shape = (bin_counts.shape[0],) + len(bin_axes) * (
             1,
