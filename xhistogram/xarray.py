@@ -6,6 +6,7 @@ import xarray as xr
 import numpy as np
 from collections import OrderedDict
 from .core import histogram as _histogram
+import warnings
 
 
 def histogram(
@@ -139,14 +140,21 @@ def histogram(
         dims_to_keep = []
         axis = None
 
-    h_data = _histogram(
-        *args_data,
-        weights=weights_data,
-        bins=bins,
-        axis=axis,
-        density=density,
-        block_size=block_size
-    )
+    # Allow future warning for https://github.com/xgcm/xhistogram/pull/45
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="Future versions of xhistogram\\.core\\.histogram will return",
+            category=FutureWarning,
+        )
+        h_data = _histogram(
+            *args_data,
+            weights=weights_data,
+            bins=bins,
+            axis=axis,
+            density=density,
+            block_size=block_size
+        )
 
     # create output dims
     new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
