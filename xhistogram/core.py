@@ -15,7 +15,6 @@ from .duck_array_ops import (
     concatenate,
     broadcast_arrays,
 )
-import warnings
 
 # range is a keyword so save the builtin so they can use it.
 _range = range
@@ -263,17 +262,6 @@ def histogram(
     --------
     numpy.histogram, numpy.bincount, numpy.digitize
     """
-
-    # Future warning for https://github.com/xgcm/xhistogram/pull/45
-    warnings.warn(
-        "Future versions of xhistogram.core.histogram will return a "
-        + "tuple containing arrays of the the histogram bins and the "
-        + "histogram values, rather than just an array of the histogram "
-        + "values. This API change will only affect users of "
-        + "xhistogram.core. Users of xhistogram.xarray can ignore this "
-        + "message.",
-        FutureWarning,
-    )
 
     a0 = args[0]
     ndim = a0.ndim

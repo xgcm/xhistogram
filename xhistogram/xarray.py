@@ -5,7 +5,6 @@ Xarray API for xhistogram.
 import xarray as xr
 from collections import OrderedDict
 from .core import histogram as _histogram
-import warnings
 
 # range is a keyword so save the builtin so they can use it.
 _range = range

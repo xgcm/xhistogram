@@ -140,6 +140,13 @@ Preparing Pull Requests
 Release History
 ---------------
 
+v0.2.0 (not yet released)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+- Implemented various options for users for providing bins to
+  xhistogram that mimic the numpy histogram API. This included
+  adding a range argument to the xhistogram API :issue:`13`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+
 v0.2.0
 ~~~~~~
 
