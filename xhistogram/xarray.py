@@ -3,21 +3,23 @@ Xarray API for xhistogram.
 """
 
 import xarray as xr
-import numpy as np
 from collections import OrderedDict
 from .core import histogram as _histogram
+
+# range is a keyword so save the builtin so they can use it.
+_range = range
 
 
 def histogram(
     *args,
     bins=None,
+    range=None,
     dim=None,
     weights=None,
     density=False,
     block_size="auto",
     keep_coords=False,
-    bin_dim_suffix="_bin",
-    bin_edge_suffix="_bin_edge"
+    bin_dim_suffix="_bin"
 ):
     """Histogram applied along specified dimensions.
 
@@ -27,23 +29,38 @@ def histogram(
         Input data. The number of input arguments determines the dimensonality of
         the histogram. For example, two arguments prodocue a 2D histogram. All
         args must be aligned and have the same dimensions.
-    bins :  int or array_like or a list of ints or arrays, optional
+    bins :  int, str or numpy array or a list of ints, strs and/or arrays, optional
         If a list, there should be one entry for each item in ``args``.
-        The bin specification:
+        The bin specifications are as follows:
 
-          * If int, the number of bins for all arguments in ``args``.
-          * If array_like, the bin edges for all arguments in ``args``.
-          * If a list of ints, the number of bins  for every argument in ``args``.
-          * If a list arrays, the bin edges for each argument in ``args``
-            (required format for Dask inputs).
-          * A combination [int, array] or [array, int], where int
-            is the number of bins and array is the bin edges.
+          * If int; the number of bins for all arguments in ``args``.
+          * If str; the method used to automatically calculate the optimal bin width
+            for all arguments in ``args``, as defined by numpy `histogram_bin_edges`.
+          * If numpy array; the bin edges for all arguments in ``args``.
+          * If a list of ints, strs and/or arrays; the bin specification as
+            above for every argument in ``args``.
 
         When bin edges are specified, all but the last (righthand-most) bin include
         the left edge and exclude the right edge. The last bin includes both edges.
 
-        A ``TypeError`` will be raised if ``args`` contains dask arrays and
-        ``bins`` are not specified explicitly as a list of arrays.
+        A TypeError will be raised if args contains dask arrays and bins are not
+        specified explicitly as an array or list of arrays. This is because other
+        bin specifications trigger computation.
+    range : (float, float) or a list of (float, float), optional
+        If a list, there should be one entry for each item in ``args``.
+        The range specifications are as follows:
+
+          * If (float, float); the lower and upper range(s) of the bins for all
+            arguments in ``args``. Values outside the range are ignored. The first
+            element of the range must be less than or equal to the second. `range`
+            affects the automatic bin computation as well. In this case, while bin
+            width is computed to be optimal based on the actual data within `range`,
+            the bin count will fill the entire range including portions containing
+            no data.
+          * If a list of (float, float); the ranges as above for every argument in
+            ``args``.
+          * If not provided, range is simply ``(arg.min(), arg.max())`` for each
+            arg.
     dim : tuple of strings, optional
         Dimensions over which which the histogram is computed. The default is to
         compute the histogram of the flattened array.
@@ -71,11 +88,15 @@ def histogram(
         chunks (dask inputs) or an experimental built-in heuristic (numpy inputs).
     keep_coords : bool, optional
         If ``True``, keep all coordinates. Default: ``False``
+    bin_dim_suffix : str, optional
+        Suffix to append to input arg names to define names of output bin
+        dimensions
 
     Returns
     -------
-    hist : array
-        The values of the histogram.
+    hist : xarray.DataArray
+        The values of the histogram. For each bin, the midpoint of the bin edges
+        is given along the bin coordinates.
 
     """
 
@@ -83,12 +104,6 @@ def histogram(
 
     # TODO: allow list of weights as well
     N_weights = 1 if weights is not None else 0
-
-    # some sanity checks
-    # TODO: replace this with a more robust function
-    assert len(bins) == N_args
-    for bin in bins:
-        assert isinstance(bin, np.ndarray), "all bins must be numpy arrays"
 
     for a in args:
         # TODO: make this a more robust check
@@ -139,10 +154,11 @@ def histogram(
         dims_to_keep = []
         axis = None
 
-    h_data = _histogram(
+    h_data, bins = _histogram(
         *args_data,
         weights=weights_data,
         bins=bins,
+        range=range,
         axis=axis,
         density=density,
         block_size=block_size
@@ -182,7 +198,7 @@ def histogram(
     # this feels like a hack
     # def _histogram_wrapped(*args, **kwargs):
     #     alist = list(args)
-    #     weights = [alist.pop() for n in range(N_weights)]
+    #     weights = [alist.pop() for n in _range(N_weights)]
     #     if N_weights == 0:
     #         weights = None
     #     elif N_weights == 1:

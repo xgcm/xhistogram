@@ -140,9 +140,21 @@ Preparing Pull Requests
 Release History
 ---------------
 
-v0.1.4 (Not yet released)
+
+v0.2.1 (not yet released)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
 - Fixed bug with density calculation when NaNs are present :issue:`51`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Implemented various options for users for providing bins to
+  xhistogram that mimic the numpy histogram API. This included
+  adding a range argument to the xhistogram API :issue:`13`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+
+v0.2.0
+~~~~~~
+
+- Added FutureWarning for upcoming changes to core API :issue:`13`.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 - Added documentation on how to deal with NaNs in weights :issue:`26`.
   By `Shanice Bailey <https://github.com/stb2145>`_.
