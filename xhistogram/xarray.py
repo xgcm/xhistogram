@@ -106,8 +106,9 @@ def histogram(
     N_weights = 1 if weights is not None else 0
 
     for a in args:
-        # TODO: make this a more robust check
-        assert a.name is not None, "all arrays must have a name"
+        if not isinstance(a, xr.DataArray):
+            raise TypeError(f"xhist() accepts an xr.DataArray object but a " \
+                            f"{type(a).__name__} was given")
 
     # we drop coords to simplify alignment
     if not keep_coords:
