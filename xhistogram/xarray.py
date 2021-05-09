@@ -19,7 +19,7 @@ def histogram(
     density=False,
     block_size="auto",
     keep_coords=False,
-    bin_dim_suffix="_bin"
+    bin_dim_suffix="_bin",
 ):
     """Histogram applied along specified dimensions.
 
@@ -107,8 +107,13 @@ def histogram(
 
     for a in args:
         if not isinstance(a, xr.DataArray):
-            raise TypeError(f"xhist() accepts an xr.DataArray object but a " \
-                            f"{type(a).__name__} was given")
+            raise TypeError(
+                "xhistogram.xarray.histogram accepts only xarray.DataArray "
+                + f"objects but a {type(a).__name__} was provided"
+            )
+
+    for a in args:
+        assert a.name is not None, "all arrays must have a name"
 
     # we drop coords to simplify alignment
     if not keep_coords:
@@ -162,7 +167,7 @@ def histogram(
         range=range,
         axis=axis,
         density=density,
-        block_size=block_size
+        block_size=block_size,
     )
 
     # create output dims
