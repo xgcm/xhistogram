@@ -205,14 +205,27 @@ def _bincount(all_arrays, weights, axis, bins, density):
     return bin_counts
 
 
+def _bincount_kernel(arr_stack, bins, axis, weights):
+    # TODO: bincount function here that behaves like this:
+    # Takes a stack of N chunks (where `N == len(arrs)`), returns their joint distribution (bincounts)
+    # over `axes`. But leaves those axes as 1-lengh. Non-aggregated axes are left as full length, in the same position.
+    # So the result has `input_ndim + len(arrs)` dimensions.
+    # The way the function transforms the shape of the input array would be like:
+    # (N, x, y, z, t) -> (1, 1, 1, t, bin0, bin1) for the current example here
+    # Or, very formally (ignoring strs vs ints):
+    # (len(arrs),) + input_inds -> (1 if d in used_inds else arr.shape[d] for d in input_inds) + (bin.size for bin in bins)
+    raise NotImplementedError
+    return bincounts
+
+
 def histogram(
-    *args, bins=None, axis=None, weights=None, density=False, block_size="auto"
+    *arrs, bins=None, axis=None, weights=None, density=False, block_size="auto"
 ):
     """Histogram applied along specified axis / axes.
 
     Parameters
     ----------
-    args : array_like
+    arrs : array_like
         Input data. The number of input arguments determines the dimensonality
         of the histogram. For example, two arguments prodocue a 2D histogram.
         All args must have the same size.
@@ -267,7 +280,8 @@ def histogram(
     numpy.histogram, numpy.bincount, numpy.digitize
     """
 
-    a0 = args[0]
+    # Axis validation
+    a0 = arrs[0]
     ndim = a0.ndim
 
     if axis is not None:
@@ -283,37 +297,70 @@ def histogram(
             axis_normed.append(ax_positive)
         axis = [int(i) for i in axis_normed]
 
-    all_arrays = list(args)
+    all_arrays = list(arrs)
 
     n_inputs = len(all_arrays)
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
-    if _any_dask_array(weights, *all_arrays):
-        raise NotImplementedError("No dask allowed for now")
-        # We should be able to just apply the bin_count function to every
-        # block and then sum over all blocks to get the total bin count.
-        # The main challenge is to figure out the chunk shape that will come
-        # out of _bincount. We might also need to add dummy dimensions to sum
-        # over in the _bincount function
-        import dask.array as dsa
+    if len(bins) != len(arrs):
+        raise ValueError
+    for b in bins:
+        if b.ndim != 1:
+            raise ValueError
 
-        bin_counts = dsa.map_blocks(
-            _bincount,
-            all_arrays,
-            weights,
-            axis,
-            bins,
-            density,
-            drop_axis=axis,
-            new_axis="what?",
-            chunks="what?",
-            meta=np.array((), dtype=np.int64),
-        )
-        # sum over the block dims
-        block_dims = "?"
-        bin_counts = bin_counts.sum(block_dims)
+    # Decide whether to use dask
+    use_dask = _any_dask_array(weights, *all_arrays)
+    if use_dask:
+        import dask.array as da
+        barrs = da.broadcast_arrays(*arrs)
     else:
-        bin_counts = _bincount(all_arrays, weights, axis, bins, density)
+        barrs = np.broadcast_arrays(*arrs)
+
+    # Set up for internal histogram algorithm
+    input_ndim = barrs[0].ndim
+    if axis is None:
+        axis = tuple(range(input_ndim))
+    elif np.isscalar(axis):
+        axis = (axis,)
+    # TODO full axis validation & negative handling
+
+    if weights:
+        raise NotImplementedError
+
+    if use_dask:
+        # Map step: bring together `len(bins)` chunks per task, and calculate their joint distribution.
+        # Leave each axis we aggregate over as 1-length.
+        # We basically end up with an array with 1 _element_ per _chunk_ of the original array:
+        # `bincounts.shape == input_array.numblocks + (bin.size for bin in bins)`.
+        # So we end up with a per-chunk(s) bincount.
+        from dask.core import flatten
+
+        input_inds = tuple(str(i) for i in range(input_ndim))
+        used_inds = tuple(str(i) for i in axis)
+        # TODO handle chunks when bins are dask arrays
+        # TODO handle different bin edges options (this assumes the last item in each bin is a right edge)
+        new_axes = {f"bins_{i}": bin.size - 1 for i, bin in enumerate(bins)}
+        out_ind = input_inds + tuple(new_axes)
+
+        bin_counts = da.blockwise(
+            _bincount_kernel,
+            out_ind,
+            *flatten([arr, input_inds] for arr in barrs),
+            new_axes=new_axes,
+            dtype=np.intp,
+            adjust_chunks={i: lambda c: 1 for i in used_inds}
+        )
+
+        # TODO weights are left as an exercise to the reader
+
+    else:
+        # numpy case is as if there was only a single chunk
+        stacked = np.stack(barrs)
+        bin_counts = _bincount_kernel(stacked, bins, axis, weights)
+
+    # Sum up the per-chunk bincounts over all chunks and remaining unti length axes to get result
+    # In the numpy case merely removes the length-1 axes
+    bin_counts = bin_counts.sum(axis=(0, *axis))  # `axis` must all be positive
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the
