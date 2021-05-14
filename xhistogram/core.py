@@ -280,23 +280,6 @@ def histogram(
     numpy.histogram, numpy.bincount, numpy.digitize
     """
 
-    # Axis validation
-    a0 = arrs[0]
-    ndim = a0.ndim
-
-    if axis is not None:
-        axis = np.atleast_1d(axis)
-        assert axis.ndim == 1
-        axis_normed = []
-        for ax in axis:
-            if ax >= 0:
-                ax_positive = ax
-            else:
-                ax_positive = ndim + ax
-            assert ax_positive < ndim, "axis must be less than ndim"
-            axis_normed.append(ax_positive)
-        axis = [int(i) for i in axis_normed]
-
     all_arrays = list(arrs)
 
     n_inputs = len(all_arrays)
