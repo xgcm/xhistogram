@@ -147,17 +147,11 @@ def _bincount_2d_vectorized(
     return bin_counts
 
 
-def _bincount(all_arrays, weights, axis, bins, density):
+def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
 
-    if weights is not None:
-        all_arrays.append(weights)
-
+    # is this necessary?
     all_arrays_broadcast = broadcast_arrays(*all_arrays)
 
-    if weights is not None:
-        weights_broadcast = all_arrays_broadcast.pop()
-    else:
-        weights_broadcast = None
     a0 = all_arrays_broadcast[0]
 
     do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
@@ -186,13 +180,13 @@ def _bincount(all_arrays, weights, axis, bins, density):
 
     all_arrays_reshaped = [reshape_input(a) for a in all_arrays_broadcast]
 
-    if weights_broadcast is not None:
-        weights_reshaped = reshape_input(weights_broadcast)
+    if weights:
+        weights_array = all_arrays_reshaped.pop()
     else:
-        weights_reshaped = None
+        weights_array = None
 
     bin_counts = _bincount_2d_vectorized(
-        *all_arrays_reshaped, bins=bins, weights=weights_reshaped, density=density
+        *all_arrays_reshaped, bins=bins, weights=weights_array, density=density
     )
 
     if bin_counts.shape[0] == 1:
@@ -201,6 +195,9 @@ def _bincount(all_arrays, weights, axis, bins, density):
     else:
         final_shape = kept_axes_shape + bin_counts.shape[1:]
         bin_counts = reshape(bin_counts, final_shape)
+
+    # now add even one more dimension (last dimension) to sum over
+    bin_counts = reshape(bin_counts, bin_counts.shape + (1,))
 
     return bin_counts
 
@@ -284,10 +281,19 @@ def histogram(
         axis = [int(i) for i in axis_normed]
 
     all_arrays = list(args)
-
     n_inputs = len(all_arrays)
+
+    if weights is not None:
+        all_arrays.append(weights)
+        has_weights = True
+    else:
+        has_weights = False
+
+    dtype = 'i8' if not has_weights else weights.dtype
+
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
+    bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
     if _any_dask_array(weights, *all_arrays):
         raise NotImplementedError("No dask allowed for now")
         # We should be able to just apply the bin_count function to every
@@ -297,23 +303,35 @@ def histogram(
         # over in the _bincount function
         import dask.array as dsa
 
-        bin_counts = dsa.map_blocks(
+        # here I am assuming all the arrays have the same shape
+        # probably needs to be generalized
+        input_indexes = [tuple(range(a.ndim)) for a in all_arrays]
+        input_index = input_indexes[0]
+        assert all([ii == input_index for ii in input_indexes])
+        # keep these axes in the inputs
+        keep_axes = tuple([ii for ii in input_index if ii not in axis])
+        new_axes = {max(input_index) + i: axis_len
+                    for i, axis_len in enumerate([len(bin) for bin in bins] + [1,])}
+        out_index = keep_axes + tuple(new_axes)
+
+        blockwise_args = []
+        for arg in all_arrays:
+            blockwise_args.append(arg)
+            blockwise_args.append(input_index)
+
+        bin_counts = dsa.blockwise(
             _bincount,
-            all_arrays,
-            weights,
-            axis,
-            bins,
-            density,
-            drop_axis=axis,
-            new_axis="what?",
-            chunks="what?",
-            meta=np.array((), dtype=np.int64),
+            out_index,
+            *blockwise_args,
+            new_axes=new_axes,
+            meta=np.array((), dtype)
+            **bincount_kwargs
         )
         # sum over the block dims
-        block_dims = "?"
-        bin_counts = bin_counts.sum(block_dims)
+        bin_counts = bin_counts.sum(-1)
     else:
-        bin_counts = _bincount(all_arrays, weights, axis, bins, density)
+        # drop the extra axis used for summing over blocks
+        bin_counts = _bincount(*all_arrays, **bincount_kwargs)[..., 0]
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the
