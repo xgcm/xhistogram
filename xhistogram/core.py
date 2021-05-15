@@ -295,7 +295,6 @@ def histogram(
 
     bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
     if _any_dask_array(weights, *all_arrays):
-        raise NotImplementedError("No dask allowed for now")
         # We should be able to just apply the bin_count function to every
         # block and then sum over all blocks to get the total bin count.
         # The main challenge is to figure out the chunk shape that will come
@@ -309,9 +308,12 @@ def histogram(
         input_index = input_indexes[0]
         assert all([ii == input_index for ii in input_indexes])
         # keep these axes in the inputs
-        keep_axes = tuple([ii for ii in input_index if ii not in axis])
-        new_axes = {max(input_index) + i: axis_len
-                    for i, axis_len in enumerate([len(bin) for bin in bins] + [1,])}
+        if axis is not None:
+            keep_axes = tuple([ii for ii in input_index if ii not in axis])
+        else:
+            keep_axes = ()
+        new_axes = {max(input_index) + 1 + i: axis_len
+                    for i, axis_len in enumerate([len(bin) - 1 for bin in bins] + [1,])}
         out_index = keep_axes + tuple(new_axes)
 
         blockwise_args = []
