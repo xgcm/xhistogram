@@ -289,7 +289,7 @@ def histogram(
     else:
         has_weights = False
 
-    dtype = 'i8' if not has_weights else weights.dtype
+    dtype = "i8" if not has_weights else weights.dtype
 
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
@@ -312,8 +312,15 @@ def histogram(
             keep_axes = tuple([ii for ii in input_index if ii not in axis])
         else:
             keep_axes = ()
-        new_axes = {max(input_index) + 1 + i: axis_len
-                    for i, axis_len in enumerate([len(bin) - 1 for bin in bins] + [1,])}
+        new_axes = {
+            max(input_index) + 1 + i: axis_len
+            for i, axis_len in enumerate(
+                [len(bin) - 1 for bin in bins]
+                + [
+                    1,
+                ]
+            )
+        }
         out_index = keep_axes + tuple(new_axes)
 
         blockwise_args = []
@@ -326,8 +333,7 @@ def histogram(
             out_index,
             *blockwise_args,
             new_axes=new_axes,
-            meta=np.array((), dtype)
-            **bincount_kwargs
+            meta=np.array((), dtype) ** bincount_kwargs,
         )
         # sum over the block dims
         bin_counts = bin_counts.sum(-1)
