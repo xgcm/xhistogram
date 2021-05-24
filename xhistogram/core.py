@@ -333,7 +333,8 @@ def histogram(
             out_index,
             *blockwise_args,
             new_axes=new_axes,
-            meta=np.array((), dtype) ** bincount_kwargs,
+            meta=np.array((), dtype), 
+            **bincount_kwargs,
         )
         # sum over the block dims
         bin_counts = bin_counts.sum(-1)
