@@ -9,7 +9,7 @@ from ..xarray import histogram
 
 @pytest.mark.parametrize("chunksize", [1, 2, 3, 10])
 @pytest.mark.parametrize("shape", [(10,), (10,4)])
-def test_fixed_size_1d_chunks(self, dataarray_factory, chunksize, shape):
+def test_fixed_size_1d_chunks(dataarray_factory, chunksize, shape):
 
     data_a = dataarray_factory(shape).chunk((chunksize,))
 
@@ -85,6 +85,7 @@ class TestFixedSize2DChunks:
         np.testing.assert_allclose(hist, h.values)
 
 
+# TODO should these live in a different file again?
 pytest.importorskip("hypothesis")
 
 import hypothesis.strategies as st
@@ -101,78 +102,65 @@ def chunk_shapes(draw, ndim=3, max_arr_len=10):
     return tuple(chunks)
 
 
-# TODO group into class
+class TestChunkingHypotheses:
+    @given(chunk_shapes(ndim=1, max_arr_len=20))
+    def test_all_chunking_patterns_1d(self, dataarray_factory, chunks):
 
-@given(chunk_shapes(ndim=1, max_arr_len=20))
-def test_all_chunking_patterns_1d(dataarray_factory, chunks):
+        data = dataarray_factory(shape=(20,)).chunk(chunks)
 
-    data = dataarray_factory(shape=(20,)).chunk(chunks)
+        nbins_a = 8
+        bins = np.linspace(-4, 4, nbins_a + 1)
 
-    nbins_a = 8
-    bins = np.linspace(-4, 4, nbins_a + 1)
+        h = histogram(data, bins=[bins])
 
-    h = histogram(data, bins=[bins])
+        assert h.shape == (nbins_a,)
 
-    assert h.shape == (nbins_a,)
+        hist, _ = np.histogram(
+            data.values.ravel(),
+            bins=bins,
+        )
 
-    hist, _ = np.histogram(
-        data.values.ravel(),
-        bins=bins,
-    )
+        np.testing.assert_allclose(hist, h)
 
-    np.testing.assert_allclose(hist, h)
+    # TODO mark as slow?
+    @given(chunk_shapes(ndim=2, max_arr_len=8))
+    def test_all_chunking_patterns_2d(self, dataarray_factory, chunks):
 
+        data_a = dataarray_factory(shape=(5,20)).chunk(chunks)
+        data_b = dataarray_factory(shape=(5,20)).chunk(chunks)
 
-# TODO mark as slow?
-@given(chunk_shapes(ndim=2, max_arr_len=8))
-def test_all_chunking_patterns_2d(dataarray_factory, chunks):
+        nbins_a = 8
+        nbins_b = 9
+        bins_a = np.linspace(-4, 4, nbins_a + 1)
+        bins_b = np.linspace(-4, 4, nbins_b + 1)
 
-    data_a = dataarray_factory(shape=(5,20)).chunk(chunks)
-    data_b = dataarray_factory(shape=(5,20)).chunk(chunks)
+        h = histogram(data_a, data_b, bins=[bins_a, bins_b])
 
-    nbins_a = 8
-    nbins_b = 9
-    bins_a = np.linspace(-4, 4, nbins_a + 1)
-    bins_b = np.linspace(-4, 4, nbins_b + 1)
+        assert h.shape == (nbins_a, nbins_b)
 
-    h = histogram(data_a, data_b, bins=[bins_a, bins_b])
+        hist, _, _ = np.histogram2d(
+            data_a.values.ravel(), data_b.values.ravel(),
+            bins=[bins_a, bins_b],
+        )
 
-    assert h.shape == (nbins_a, nbins_b)
+        np.testing.assert_allclose(hist, h.values)
 
-    hist, _, _ = np.histogram2d(
-        data_a.values.ravel(), data_b.values.ravel(),
-        bins=[bins_a, bins_b],
-    )
+    # TODO mark as slow?
+    @pytest.mark.parametrize("n_vars", [1, 2, 3, 4])
+    #@given(chunk_shapes(ndim=2, max_arr_len=7))
+    def test_all_chunking_patterns_dd_hist(self, dataset_factory, n_vars, chunk_shapes=(1,1)):
+        ds = dataset_factory(ndim=2, n_vars=n_vars)
+        ds = ds.chunk({d: c for d, c in zip(ds.dims.keys(), chunk_shapes)})
 
-    np.testing.assert_allclose(hist, h.values)
+        n_bins = (7, 8, 9, 10)[:n_vars]
+        bins = [np.linspace(-4, 4, n + 1) for n in n_bins]
 
+        h = histogram(*[da for name, da in ds.data_vars.items()], bins=bins)
 
-# TODO mark as slow?
-@pytest.mark.parametrize("n_vars", [1, 2, 3, 4])
-#@given(chunk_shapes(ndim=2, max_arr_len=7))
-def test_all_chunking_patterns_dd_hist(dataset_factory, n_vars, chunk_shapes=(1,1)):
-    ds = dataset_factory(ndim=2, n_vars=n_vars)
-    #print(ds.dims)
-    ds = ds.chunk({d: c for d, c in zip(ds.dims.keys(), chunk_shapes)})
+        assert h.shape == n_bins
 
-    #print(ds)
-    #print(ds[name] for name in ds.items())
-    n_bins = (7, 8, 9, 10)[:n_vars]
-    bins = [np.linspace(-4, 4, n + 1) for n in n_bins]
+        input_data = np.stack([da.values.ravel() for name, da in ds.data_vars.items()],
+                              axis=-1)
+        hist, _ = np.histogramdd(input_data, bins=bins)
 
-    #print(*[da for name, da in ds.data_vars.items()])
-
-    print(bins)
-    h = histogram(*[da for name, da in ds.data_vars.items()], bins=bins)
-
-
-    #print(h)
-
-    assert h.shape == n_bins
-
-    input_data = np.stack([da.values.ravel() for name, da in ds.data_vars.items()],
-                          axis=-1)
-    print(input_data)
-    hist, _ = np.histogramdd(input_data, bins=bins)
-
-    np.testing.assert_allclose(hist, h.values)
+        np.testing.assert_allclose(hist, h.values)
