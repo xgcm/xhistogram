@@ -147,8 +147,8 @@ class TestChunkingHypotheses:
 
     # TODO mark as slow?
     @pytest.mark.parametrize("n_vars", [1, 2, 3, 4])
-    #@given(chunk_shapes(ndim=2, max_arr_len=7))
-    def test_all_chunking_patterns_dd_hist(self, dataset_factory, n_vars, chunk_shapes=(1,1)):
+    @given(chunk_shapes(ndim=2, max_arr_len=7))
+    def test_all_chunking_patterns_dd_hist(self, dataset_factory, n_vars, chunk_shapes):
         ds = dataset_factory(ndim=2, n_vars=n_vars)
         ds = ds.chunk({d: c for d, c in zip(ds.dims.keys(), chunk_shapes)})
 
