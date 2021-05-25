@@ -155,10 +155,13 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
     a0 = all_arrays_broadcast[0]
 
     do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
+
     if do_full_array:
-        kept_axes_shape = None
+        kept_axes_shape = (1,) * a0.ndim
     else:
-        kept_axes_shape = tuple([a0.shape[i] for i in range(a0.ndim) if i not in axis])
+        kept_axes_shape = tuple(
+            [a0.shape[i] if i not in axis else 1 for i in range(a0.ndim)]
+        )
 
     def reshape_input(a):
         if do_full_array:
@@ -171,7 +174,7 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
             c = np.moveaxis(a, axis, new_pos)
             split_idx = c.ndim - len(axis)
             dims_0 = c.shape[:split_idx]
-            assert dims_0 == kept_axes_shape
+            # assert dims_0 == kept_axes_shape
             dims_1 = c.shape[split_idx:]
             new_dim_0 = np.prod(dims_0)
             new_dim_1 = np.prod(dims_1)
@@ -189,15 +192,8 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
         *all_arrays_reshaped, bins=bins, weights=weights_array, density=density
     )
 
-    if bin_counts.shape[0] == 1:
-        assert do_full_array
-        bin_counts = bin_counts.squeeze()
-    else:
-        final_shape = kept_axes_shape + bin_counts.shape[1:]
-        bin_counts = reshape(bin_counts, final_shape)
-
-    # now add even one more dimension (last dimension) to sum over
-    bin_counts = reshape(bin_counts, bin_counts.shape + (1,))
+    final_shape = kept_axes_shape + bin_counts.shape[1:]
+    bin_counts = reshape(bin_counts, final_shape)
 
     return bin_counts
 
@@ -294,6 +290,19 @@ def histogram(
     bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
 
     bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
+
+    # here I am assuming all the arrays have the same shape
+    # probably needs to be generalized
+    input_indexes = [tuple(range(a.ndim)) for a in all_arrays]
+    input_index = input_indexes[0]
+    assert all([ii == input_index for ii in input_indexes])
+
+    # keep these axes in the inputs
+    if axis is not None:
+        drop_axes = tuple([ii for ii in input_index if ii in axis])
+    else:
+        drop_axes = input_index
+
     if _any_dask_array(weights, *all_arrays):
         # We should be able to just apply the bin_count function to every
         # block and then sum over all blocks to get the total bin count.
@@ -302,26 +311,20 @@ def histogram(
         # over in the _bincount function
         import dask.array as dsa
 
-        # here I am assuming all the arrays have the same shape
-        # probably needs to be generalized
-        input_indexes = [tuple(range(a.ndim)) for a in all_arrays]
-        input_index = input_indexes[0]
-        assert all([ii == input_index for ii in input_indexes])
-        # keep these axes in the inputs
-        if axis is not None:
-            keep_axes = tuple([ii for ii in input_index if ii not in axis])
-        else:
-            keep_axes = ()
+        # Important note from blockwise docs
+        # > Any index, like i missing from the output index is interpreted as a contraction...
+        # > In the case of a contraction the passed function should expect an iterable of blocks
+        # > on any array that holds that index.
+        # This means that we need to have all the input indexes present in the output index
+        # However, they will be reduced to singleton (len 1) dimensions
+
+        adjust_chunks = {i: (lambda x: 1) for i in drop_axes}
+
         new_axes = {
             max(input_index) + 1 + i: axis_len
-            for i, axis_len in enumerate(
-                [len(bin) - 1 for bin in bins]
-                + [
-                    1,
-                ]
-            )
+            for i, axis_len in enumerate([len(bin) - 1 for bin in bins])
         }
-        out_index = keep_axes + tuple(new_axes)
+        out_index = input_index + tuple(new_axes)
 
         blockwise_args = []
         for arg in all_arrays:
@@ -333,14 +336,15 @@ def histogram(
             out_index,
             *blockwise_args,
             new_axes=new_axes,
-            meta=np.array((), dtype), 
+            adjust_chunks=adjust_chunks,
+            meta=np.array((), dtype),
             **bincount_kwargs,
         )
         # sum over the block dims
-        bin_counts = bin_counts.sum(-1)
+        bin_counts = bin_counts.sum(drop_axes)
     else:
         # drop the extra axis used for summing over blocks
-        bin_counts = _bincount(*all_arrays, **bincount_kwargs)[..., 0]
+        bin_counts = _bincount(*all_arrays, **bincount_kwargs).squeeze(drop_axes)
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the
