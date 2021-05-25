@@ -5,8 +5,6 @@ from .fixtures import dataarray_factory, dataset_factory
 from ..xarray import histogram
 
 
-
-
 @pytest.mark.parametrize("chunksize", [1, 2, 3, 10])
 @pytest.mark.parametrize("shape", [(10,), (10,4)])
 def test_fixed_size_1d_chunks(dataarray_factory, chunksize, shape):
