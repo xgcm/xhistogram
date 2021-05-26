@@ -1,6 +1,3 @@
-import random
-import string
-
 import pytest
 import dask
 import dask.array as dsa
