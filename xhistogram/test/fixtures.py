@@ -20,11 +20,11 @@ def empty_dask_array(shape, dtype=float, chunks=None):
     return a
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def dataarray_factory():
     def _dataarray_factory(shape=(5,20)):
         data = np.random.randn(*shape)
-        dims = [random.choice(string.ascii_lowercase) for ax in shape]
+        dims = ["x", "y", "z", "w"][:len(shape)]
         da = xr.DataArray(
             data, dims=dims, name="T"
         )
@@ -32,15 +32,16 @@ def dataarray_factory():
     return _dataarray_factory
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def dataset_factory():
     """Random dataset with every variable having the same shape"""
     def _dataset_factory(ndim=2, n_vars=2):
         shape = (8, 9, 10, 11)[:ndim]
-        dims = [random.choice(string.ascii_lowercase) for ax in shape]
+        dims = ["x", "y", "z", "w"][:ndim]
+        var_names = ['T', 'S', 'V', 'U']
         ds = xr.Dataset()
-        for _ in range(n_vars):
-            name = random.choice(string.ascii_uppercase)
+        for i in range(n_vars):
+            name = var_names[i]
             data = np.random.randn(*shape)
             da = xr.DataArray(
                 data, dims=dims, name=name
