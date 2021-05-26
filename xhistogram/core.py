@@ -338,6 +338,7 @@ def histogram(
             new_axes=new_axes,
             adjust_chunks=adjust_chunks,
             meta=np.array((), dtype),
+            align_arrays=False,
             **bincount_kwargs,
         )
         # sum over the block dims
