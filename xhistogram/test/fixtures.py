@@ -27,7 +27,7 @@ def example_dataarray(shape=(5, 20)):
 def example_dataset(n_dim=2, n_vars=2):
     """Random dataset with every variable having the same shape"""
 
-    shape = (8, 9, 10, 11)[:n_dim]
+    shape = tuple(range(8, 8 + n_dim))
     dims = [f"dim_{i}" for i in range(len(shape))]
     var_names = [uuid.uuid4().hex for _ in range(n_vars)]
     ds = xr.Dataset()
