@@ -5,20 +5,28 @@ from .fixtures import example_dataarray
 from ..xarray import histogram
 
 
+@pytest.mark.parametrize("weights", [False, True])
 @pytest.mark.parametrize("chunksize", [1, 2, 3, 10])
 @pytest.mark.parametrize("shape", [(10,), (10, 4)])
-def test_fixed_size_1d_chunks(chunksize, shape):
+def test_chunked_weights(chunksize, shape, weights):
 
     data_a = example_dataarray(shape).chunk((chunksize,))
+    
+    if weights:
+        weights = example_dataarray(shape).chunk((chunksize,))
+        weights_arr = weights.values.ravel()
+    else:
+        weights = weights_arr = None
 
     nbins_a = 6
     bins_a = np.linspace(-4, 4, nbins_a + 1)
 
-    h = histogram(data_a, bins=[bins_a])
+    h = histogram(data_a, bins=[bins_a], weights=weights)
 
     assert h.shape == (nbins_a,)
 
-    hist, _ = np.histogram(data_a.values.ravel(), bins=bins_a)
+    hist, _ = np.histogram(data_a.values.ravel(), bins=bins_a,
+                           weights=weights_arr)
 
     np.testing.assert_allclose(hist, h.values)
 
