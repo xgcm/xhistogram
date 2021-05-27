@@ -102,7 +102,6 @@ class TestUnalignedChunks:
         data_b = example_dataarray(shape=(10, 12)).chunk(
             (xchunksize + 1, ychunksize + 1)
         )
-        print(data_b.chunks)
 
         nbins_a = 8
         nbins_b = 9
