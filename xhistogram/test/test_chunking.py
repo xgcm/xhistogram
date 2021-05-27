@@ -92,3 +92,52 @@ class TestFixedSize2DChunks:
         )
 
         np.testing.assert_allclose(hist, h.values)
+
+
+@pytest.mark.parametrize("xchunksize", [1, 2, 3, 10])
+@pytest.mark.parametrize("ychunksize", [1, 2, 3, 12])
+class TestUnalignedChunks:
+    def test_unaligned_data_chunks(self, xchunksize, ychunksize):
+        data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        print(data_a.chunks)
+        data_b = example_dataarray(shape=(10, 12)).chunk(
+            (xchunksize + 1, ychunksize + 1)
+        )
+        print(data_b.chunks)
+
+        nbins_a = 8
+        nbins_b = 9
+        bins_a = np.linspace(-4, 4, nbins_a + 1)
+        bins_b = np.linspace(-4, 4, nbins_b + 1)
+
+        h = histogram(data_a, data_b, bins=[bins_a, bins_b])
+
+        assert h.shape == (nbins_a, nbins_b)
+
+        hist, _, _ = np.histogram2d(
+            data_a.values.ravel(),
+            data_b.values.ravel(),
+            bins=[bins_a, bins_b],
+        )
+
+        np.testing.assert_allclose(hist, h.values)
+
+    def test_unaligned_weights_chunks(self, xchunksize, ychunksize):
+
+        data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        weights = example_dataarray(shape=(10, 12)).chunk(
+            (xchunksize + 1, ychunksize + 1)
+        )
+
+        nbins_a = 8
+        bins_a = np.linspace(-4, 4, nbins_a + 1)
+
+        h = histogram(data_a, bins=[bins_a], weights=weights)
+
+        assert h.shape == (nbins_a,)
+
+        hist, _ = np.histogram(
+            data_a.values.ravel(), bins=bins_a, weights=weights.values.ravel()
+        )
+
+        np.testing.assert_allclose(hist, h.values)
