@@ -11,17 +11,17 @@ from hypothesis import given
 
 
 @st.composite
-def chunk_shapes(draw, ndim=3, max_arr_len=10):
+def chunk_shapes(draw, n_dim=3, max_arr_len=10):
     """Generate different chunking patterns for an N-D array of data."""
     chunks = []
-    for n in range(ndim):
+    for n in range(n_dim):
         shape = draw(st.integers(min_value=1, max_value=max_arr_len))
         chunks.append(shape)
     return tuple(chunks)
 
 
 class TestChunkingHypotheses:
-    @given(chunk_shapes(ndim=1, max_arr_len=20))
+    @given(chunk_shapes(n_dim=1, max_arr_len=20))
     def test_all_chunking_patterns_1d(self, dataarray_factory, chunks):
 
         data = dataarray_factory(shape=(20,)).chunk(chunks)
@@ -41,7 +41,7 @@ class TestChunkingHypotheses:
         np.testing.assert_allclose(hist, h)
 
     # TODO mark as slow?
-    @given(chunk_shapes(ndim=2, max_arr_len=8))
+    @given(chunk_shapes(n_dim=2, max_arr_len=8))
     def test_all_chunking_patterns_2d(self, dataarray_factory, chunks):
 
         data_a = dataarray_factory(shape=(5, 20)).chunk(chunks)
@@ -66,9 +66,9 @@ class TestChunkingHypotheses:
 
     # TODO mark as slow?
     @pytest.mark.parametrize("n_vars", [1, 2, 3, 4])
-    @given(chunk_shapes(ndim=2, max_arr_len=7))
+    @given(chunk_shapes(n_dim=2, max_arr_len=7))
     def test_all_chunking_patterns_dd_hist(self, dataset_factory, n_vars, chunk_shapes):
-        ds = dataset_factory(ndim=2, n_vars=n_vars)
+        ds = dataset_factory(n_dim=2, n_vars=n_vars)
         ds = ds.chunk({d: c for d, c in zip(ds.dims.keys(), chunk_shapes)})
 
         n_bins = (7, 8, 9, 10)[:n_vars]

@@ -32,9 +32,9 @@ def dataarray_factory():
 def dataset_factory():
     """Random dataset with every variable having the same shape"""
 
-    def _dataset_factory(ndim=2, n_vars=2):
-        shape = (8, 9, 10, 11)[:ndim]
-        dims = ["x", "y", "z", "w"][:ndim]
+    def _dataset_factory(n_dim=2, n_vars=2):
+        shape = (8, 9, 10, 11)[:n_dim]
+        dims = ["x", "y", "z", "w"][:n_dim]
         var_names = ["T", "S", "V", "U"]
         ds = xr.Dataset()
         for i in range(n_vars):
