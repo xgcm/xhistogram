@@ -14,7 +14,7 @@ def test_chunked_weights(chunksize, shape, weights):
 
     if weights:
         weights = example_dataarray(shape).chunk((chunksize,))
-        weights_arr = weights.values.ravel()
+        weights_arr = weights.values
     else:
         weights = weights_arr = None
 
@@ -25,7 +25,7 @@ def test_chunked_weights(chunksize, shape, weights):
 
     assert h.shape == (nbins_a,)
 
-    hist, _ = np.histogram(data_a.values.ravel(), bins=bins_a, weights=weights_arr)
+    hist, _ = np.histogram(data_a.values, bins=bins_a, weights=weights_arr)
 
     np.testing.assert_allclose(hist, h.values)
 
@@ -44,7 +44,7 @@ class TestFixedSize2DChunks:
 
         assert h.shape == (nbins_a,)
 
-        hist, _ = np.histogram(data_a.values.ravel(), bins=bins_a)
+        hist, _ = np.histogram(data_a.values, bins=bins_a)
 
         np.testing.assert_allclose(hist, h.values)
 
@@ -135,7 +135,7 @@ class TestUnalignedChunks:
         assert h.shape == (nbins_a,)
 
         hist, _ = np.histogram(
-            data_a.values.ravel(), bins=bins_a, weights=weights.values.ravel()
+            data_a.values, bins=bins_a, weights=weights.values
         )
 
         np.testing.assert_allclose(hist, h.values)

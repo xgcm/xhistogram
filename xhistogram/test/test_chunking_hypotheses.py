@@ -34,7 +34,7 @@ class TestChunkingHypotheses:
         assert h.shape == (nbins_a,)
 
         hist, _ = np.histogram(
-            data.values.ravel(),
+            data.values,
             bins=bins,
         )
 
