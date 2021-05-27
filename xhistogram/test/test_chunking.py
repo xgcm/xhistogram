@@ -48,27 +48,34 @@ class TestFixedSize2DChunks:
 
         np.testing.assert_allclose(hist, h.values)
 
+    @pytest.mark.parametrize("reduce_dim", ["dim_0", "dim_1"])
     def test_2d_chunks_broadcast_dim(
         self,
         xchunksize,
         ychunksize,
+        reduce_dim,
     ):
         data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        dims = list(data_a.dims)
+        broadcast_dim = [d for d in dims if d != reduce_dim][0]
 
         nbins_a = 8
         bins_a = np.linspace(-4, 4, nbins_a + 1)
 
-        reduce_dim, broadcast_dim = data_a.dims
-        h = histogram(data_a, bins=[bins_a], dim=(reduce_dim,)).transpose()
+        h = histogram(data_a, bins=[bins_a], dim=(reduce_dim,))
 
-        assert h.shape == (nbins_a, data_a.sizes[broadcast_dim])
+        assert h.shape == (data_a.sizes[broadcast_dim], nbins_a)
 
         def _np_hist(*args, **kwargs):
             h, _ = np.histogram(*args, **kwargs)
             return h
 
-        hist = np.apply_along_axis(_np_hist, axis=0, arr=data_a.values, bins=bins_a)
+        hist = np.apply_along_axis(
+            _np_hist, axis=dims.index(reduce_dim), arr=data_a.values, bins=bins_a
+        )
 
+        if reduce_dim == "dim_0":
+            h = h.transpose()
         np.testing.assert_allclose(hist, h.values)
 
     def test_2d_chunks_2d_hist(self, xchunksize, ychunksize):
@@ -134,8 +141,6 @@ class TestUnalignedChunks:
 
         assert h.shape == (nbins_a,)
 
-        hist, _ = np.histogram(
-            data_a.values, bins=bins_a, weights=weights.values
-        )
+        hist, _ = np.histogram(data_a.values, bins=bins_a, weights=weights.values)
 
         np.testing.assert_allclose(hist, h.values)
