@@ -53,7 +53,6 @@ class TestFixedSize2DChunks:
         nbins_a = 8
         bins_a = np.linspace(-4, 4, nbins_a + 1)
 
-        print(data_a.dims)
         reduce_dim, broadcast_dim = data_a.dims
         h = histogram(data_a, bins=[bins_a], dim=reduce_dim).transpose()
 
