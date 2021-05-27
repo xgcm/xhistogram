@@ -99,7 +99,6 @@ class TestFixedSize2DChunks:
 class TestUnalignedChunks:
     def test_unaligned_data_chunks(self, xchunksize, ychunksize):
         data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
-        print(data_a.chunks)
         data_b = example_dataarray(shape=(10, 12)).chunk(
             (xchunksize + 1, ychunksize + 1)
         )
