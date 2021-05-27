@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import dask
 import dask.array as dsa
@@ -21,7 +22,7 @@ def empty_dask_array(shape, dtype=float, chunks=None):
 def dataarray_factory():
     def _dataarray_factory(shape=(5, 20)):
         data = np.random.randn(*shape)
-        dims = ["x", "y", "z", "w"][: len(shape)]
+        dims = [f"dim_{i}" for i in range(len(shape))]
         da = xr.DataArray(data, dims=dims, name="T")
         return da
 
@@ -34,8 +35,8 @@ def dataset_factory():
 
     def _dataset_factory(n_dim=2, n_vars=2):
         shape = (8, 9, 10, 11)[:n_dim]
-        dims = ["x", "y", "z", "w"][:n_dim]
-        var_names = ["T", "S", "V", "U"]
+        dims = [f"dim_{i}" for i in range(len(shape))]
+        var_names = [uuid.uuid4().hex for _ in range(n_vars)]
         ds = xr.Dataset()
         for i in range(n_vars):
             name = var_names[i]
