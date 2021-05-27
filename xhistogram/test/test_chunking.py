@@ -1,16 +1,15 @@
-# flake8: noqa
 import numpy as np
 import pytest
 
-from .fixtures import dataarray_factory, dataset_factory  # noqa
+from .fixtures import example_dataarray
 from ..xarray import histogram
 
 
 @pytest.mark.parametrize("chunksize", [1, 2, 3, 10])
 @pytest.mark.parametrize("shape", [(10,), (10, 4)])
-def test_fixed_size_1d_chunks(dataarray_factory, chunksize, shape):
+def test_fixed_size_1d_chunks(chunksize, shape):
 
-    data_a = dataarray_factory(shape).chunk((chunksize,))
+    data_a = example_dataarray(shape).chunk((chunksize,))
 
     nbins_a = 6
     bins_a = np.linspace(-4, 4, nbins_a + 1)
@@ -27,9 +26,9 @@ def test_fixed_size_1d_chunks(dataarray_factory, chunksize, shape):
 @pytest.mark.parametrize("xchunksize", [1, 2, 3, 10])
 @pytest.mark.parametrize("ychunksize", [1, 2, 3, 12])
 class TestFixedSize2DChunks:
-    def test_2d_chunks(self, dataarray_factory, xchunksize, ychunksize):
+    def test_2d_chunks(self, xchunksize, ychunksize):
 
-        data_a = dataarray_factory(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
 
         nbins_a = 8
         bins_a = np.linspace(-4, 4, nbins_a + 1)
@@ -44,11 +43,10 @@ class TestFixedSize2DChunks:
 
     def test_2d_chunks_broadcast_dim(
         self,
-        dataarray_factory,
         xchunksize,
         ychunksize,
     ):
-        data_a = dataarray_factory(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
 
         nbins_a = 8
         bins_a = np.linspace(-4, 4, nbins_a + 1)
@@ -66,10 +64,10 @@ class TestFixedSize2DChunks:
 
         np.testing.assert_allclose(hist, h.values)
 
-    def test_2d_chunks_2d_hist(self, dataarray_factory, xchunksize, ychunksize):
+    def test_2d_chunks_2d_hist(self, xchunksize, ychunksize):
 
-        data_a = dataarray_factory(shape=(10, 12)).chunk((xchunksize, ychunksize))
-        data_b = dataarray_factory(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        data_a = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
+        data_b = example_dataarray(shape=(10, 12)).chunk((xchunksize, ychunksize))
 
         nbins_a = 8
         nbins_b = 9

@@ -1,13 +1,13 @@
 import numpy as np
 import pytest
 
-from .fixtures import dataarray_factory, dataset_factory
+from .fixtures import example_dataarray, example_dataset
 from ..xarray import histogram
 
 pytest.importorskip("hypothesis")
 
-import hypothesis.strategies as st
-from hypothesis import given
+import hypothesis.strategies as st  # noqa
+from hypothesis import given  # noqa
 
 
 @st.composite
@@ -22,9 +22,9 @@ def chunk_shapes(draw, n_dim=3, max_arr_len=10):
 
 class TestChunkingHypotheses:
     @given(chunk_shapes(n_dim=1, max_arr_len=20))
-    def test_all_chunking_patterns_1d(self, dataarray_factory, chunks):
+    def test_all_chunking_patterns_1d(self, chunks):
 
-        data = dataarray_factory(shape=(20,)).chunk(chunks)
+        data = example_dataarray(shape=(20,)).chunk(chunks)
 
         nbins_a = 8
         bins = np.linspace(-4, 4, nbins_a + 1)
@@ -42,10 +42,10 @@ class TestChunkingHypotheses:
 
     # TODO mark as slow?
     @given(chunk_shapes(n_dim=2, max_arr_len=8))
-    def test_all_chunking_patterns_2d(self, dataarray_factory, chunks):
+    def test_all_chunking_patterns_2d(self, chunks):
 
-        data_a = dataarray_factory(shape=(5, 20)).chunk(chunks)
-        data_b = dataarray_factory(shape=(5, 20)).chunk(chunks)
+        data_a = example_dataarray(shape=(5, 20)).chunk(chunks)
+        data_b = example_dataarray(shape=(5, 20)).chunk(chunks)
 
         nbins_a = 8
         nbins_b = 9
@@ -67,8 +67,8 @@ class TestChunkingHypotheses:
     # TODO mark as slow?
     @pytest.mark.parametrize("n_vars", [1, 2, 3, 4])
     @given(chunk_shapes(n_dim=2, max_arr_len=7))
-    def test_all_chunking_patterns_dd_hist(self, dataset_factory, n_vars, chunk_shapes):
-        ds = dataset_factory(n_dim=2, n_vars=n_vars)
+    def test_all_chunking_patterns_dd_hist(self, n_vars, chunk_shapes):
+        ds = example_dataset(n_dim=2, n_vars=n_vars)
         ds = ds.chunk({d: c for d, c in zip(ds.dims.keys(), chunk_shapes)})
 
         n_bins = (7, 8, 9, 10)[:n_vars]
