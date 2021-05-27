@@ -11,7 +11,7 @@ from ..xarray import histogram
 def test_chunked_weights(chunksize, shape, weights):
 
     data_a = example_dataarray(shape).chunk((chunksize,))
-    
+
     if weights:
         weights = example_dataarray(shape).chunk((chunksize,))
         weights_arr = weights.values.ravel()
@@ -25,8 +25,7 @@ def test_chunked_weights(chunksize, shape, weights):
 
     assert h.shape == (nbins_a,)
 
-    hist, _ = np.histogram(data_a.values.ravel(), bins=bins_a,
-                           weights=weights_arr)
+    hist, _ = np.histogram(data_a.values.ravel(), bins=bins_a, weights=weights_arr)
 
     np.testing.assert_allclose(hist, h.values)
 
