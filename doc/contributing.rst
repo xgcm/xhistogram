@@ -140,9 +140,23 @@ Preparing Pull Requests
 Release History
 ---------------
 
-v0.1.4
+v0.2.1 (not yet released)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+- Implemented various options for users for providing bins to
+  xhistogram that mimic the numpy histogram API. This included
+  adding a range argument to the xhistogram API :issue:`13`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Added a function to check if the object passed to xhist() is an
+  xarray.DataArray and if not, throw an error. :issue:`14`.
+  By `Yang Yunyi <https://github.com/Badboy-16>`_.
+
+v0.2.0
 ~~~~~~
 
+- Added FutureWarning for upcoming changes to core API :issue:`13`.
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Added documentation on how to deal with NaNs in weights :issue:`26`.
+  By `Shanice Bailey <https://github.com/stb2145>`_.
 - Move CI to GitHub actions :issue:`32`.
   By `James Bourbeau <https://github.com/jrbourbeau>`_.
 - Add documentation for contributors.
