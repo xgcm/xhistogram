@@ -13,7 +13,21 @@ from numpy import (
     concatenate,
     broadcast_arrays,
 )
-from .duck_array_ops import _any_dask_array
+
+
+try:
+    import dask.array as dsa
+
+    has_dask = True
+except ImportError:
+    has_dask = False
+
+
+def _any_dask_array(*args):
+    if not has_dask:
+        return False
+    else:
+        return any(isinstance(a, dsa.core.Array) for a in args)
 
 
 def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
