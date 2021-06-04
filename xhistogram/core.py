@@ -135,7 +135,7 @@ def _dispatch_bincount(bin_indices, weights, N, hist_shapes, block_size=None):
 
 
 def _bincount_2d_vectorized(
-    *args, bins=None, weights=None, density=False, right=False, block_size=None
+    *args, bins=None, weights=None, block_size=None
 ):
     """Calculate the histogram independently on each row of a 2D array"""
 
@@ -192,10 +192,17 @@ def _bincount_2d_vectorized(
     return bin_counts
 
 
-def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
+def _bincount(*all_arrays, weights=False, axis=None, density=None):
+
+    # TODO a more robust way to pass the bins together with the arrays
+    n_args = len(all_arrays) // 2
+    arrays = all_arrays[:n_args]
+    print(arrays[0].shape)
+    bins = all_arrays[n_args:]
+    print(bins[0].shape)
 
     # is this necessary?
-    all_arrays_broadcast = broadcast_arrays(*all_arrays)
+    all_arrays_broadcast = broadcast_arrays(*arrays)
 
     a0 = all_arrays_broadcast[0]
 
@@ -227,6 +234,7 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
         return d
 
     all_arrays_reshaped = [reshape_input(a) for a in all_arrays_broadcast]
+    bins_reshaped = [reshape_input(b) for b in bins]
 
     if weights:
         weights_array = all_arrays_reshaped.pop()
@@ -234,7 +242,7 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
         weights_array = None
 
     bin_counts = _bincount_2d_vectorized(
-        *all_arrays_reshaped, bins=bins, weights=weights_array, density=density
+        *all_arrays_reshaped, bins=bins_reshaped, weights=weights_array
     )
 
     final_shape = kept_axes_shape + bin_counts.shape[1:]
@@ -365,7 +373,7 @@ def histogram(
     assert all([ii == input_index for ii in input_indexes])
 
     # Some sanity checks and format bins and range correctly
-    bins = _ensure_correctly_formatted_bins(bins, n_inputs)
+    formatted_bins = _ensure_correctly_formatted_bins(bins, n_inputs)
     range = _ensure_correctly_formatted_range(range, n_inputs)
 
     # histogram_bin_edges trigges computation on dask arrays. It would be possible
@@ -377,11 +385,14 @@ def histogram(
                 "When using dask arrays, bins must be provided as numpy array(s) of edges"
             )
     else:
-        bins = [
-            np.histogram_bin_edges(a, b, r)
-            for a, b, r in zip(all_arrays, bins, range)
-        ]
-    bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
+        bins = []
+        for a, b, r in zip(all_arrays, formatted_bins, range):
+            if isinstance(b, np.ndarray):
+                pass
+            else:
+                b = np.histogram_bin_edges(a, b, r)
+            bins.append(b)
+    bincount_kwargs = dict(weights=has_weights, axis=axis, density=density)
 
     # keep these axes in the inputs
     if axis is not None:
@@ -417,6 +428,12 @@ def histogram(
             blockwise_args.append(arg)
             blockwise_args.append(input_index)
 
+        # Bins arrays do not contain axes which will get reduced along
+        bins_input_index = tuple(ii for ii in out_index if ii not in drop_axes)
+        for b in bins:
+            blockwise_args.append(b)
+            blockwise_args.append(bins_input_index)
+
         bin_counts = dsa.blockwise(
             _bincount,
             out_index,
@@ -430,7 +447,7 @@ def histogram(
         bin_counts = bin_counts.sum(drop_axes)
     else:
         # drop the extra axis used for summing over blocks
-        bin_counts = _bincount(*all_arrays, **bincount_kwargs).squeeze(drop_axes)
+        bin_counts = _bincount(*(all_arrays + bins), **bincount_kwargs).squeeze(drop_axes)
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the

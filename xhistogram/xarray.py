@@ -29,7 +29,7 @@ def histogram(
         Input data. The number of input arguments determines the dimensonality of
         the histogram. For example, two arguments prodocue a 2D histogram. All
         args must be aligned and have the same dimensions.
-    bins :  int, str or numpy array or a list of ints, strs and/or arrays, optional
+    bins :  int, str, numpy array or DataArray, or a list of ints, strs, arrays and/or DataArrays, optional
         If a list, there should be one entry for each item in ``args``.
         The bin specifications are as follows:
 
@@ -37,6 +37,10 @@ def histogram(
           * If str; the method used to automatically calculate the optimal bin width
             for all arguments in ``args``, as defined by numpy `histogram_bin_edges`.
           * If numpy array; the bin edges for all arguments in ``args``.
+          * If xarray DataArray: the bin edges for all arguments in ``args``.
+            The DataArray can be multidimensional, but must contain the output
+            bins dimension (i.e. `[var]_bins`) and must not have any dimensions
+            present in the `dim` argument.
           * If a list of ints, strs and/or arrays; the bin specification as
             above for every argument in ``args``.
 
@@ -153,6 +157,21 @@ def histogram(
     else:
         weights_data = None
 
+    if isinstance(dim, str):
+        dim = (dim,)
+
+    # align bins if DataArrays
+    # TODO check correct dimensions exist
+    # Drop dimensions that will be reduced along before aligning bins
+    output_shape = a0.isel(**{d: 0 for d in dim}, drop=True)
+    aligned_bins = []
+    for bin in bins:
+        if isinstance(bin, xr.DataArray):
+            aligned_bin, _ = xr.align(bin, output_shape, join="exact")
+            aligned_bins.append(aligned_bin.values)
+        else:
+            aligned_bins.append(bin)
+
     if dim is not None:
         dims_to_keep = [d for d in all_dims_ordered if d not in dim]
         axis = [args_transposed[0].get_axis_num(d) for d in dim]
@@ -163,7 +182,7 @@ def histogram(
     h_data, bins = _histogram(
         *args_data,
         weights=weights_data,
-        bins=bins,
+        bins=aligned_bins,
         range=range,
         axis=axis,
         density=density,
