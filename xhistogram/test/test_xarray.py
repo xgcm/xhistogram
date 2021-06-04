@@ -4,6 +4,7 @@ import pytest
 import pandas as pd
 from itertools import combinations
 
+from .fixtures import example_dataarray
 from ..xarray import histogram
 
 
@@ -206,3 +207,54 @@ def test_input_type_check():
     np_array = np.arange(100)
     with pytest.raises(TypeError):
         histogram(np_array)
+
+
+class TestMultiDimensionalBins:
+    def test_bin_dataarrays_with_extra_dims(self):
+        data = xr.DataArray([0], dims=["x"], name="a")
+        bins = xr.DataArray([[1]], dims=["bad", "a_bins"])
+        with pytest.raises(ValueError, match="will not be broadcast"):
+            histogram(data, dim="x", bins=[bins])
+
+    def test_bin_dataarrays_without_reduce_dim(self):
+        data = xr.DataArray([0], dims=["x"], name="a")
+        bins = xr.DataArray(1)
+        with pytest.raises(ValueError, match="does not contain"):
+            histogram(data, dim="x", bins=[bins])
+
+    # TODO parametrize over ndims?
+    def test_1d_bins_da(self):
+        data_a = example_dataarray(shape=(10, 12))
+        nbins_a = 8
+        bins_a = xr.DataArray(np.linspace(-4, 4, nbins_a + 1),
+                              dims=f'{data_a.name}_bins')
+
+        h = histogram(data_a, bins=[bins_a])
+
+        assert h.shape == (nbins_a,)
+
+        hist, _ = np.histogram(data_a.values, bins=bins_a)
+
+        np.testing.assert_allclose(hist, h.values)
+
+    def test_2d_bins_da(self):
+        data_a = example_dataarray(shape=(10, 2))
+        nbins_a = 7
+        bins_a = xr.DataArray([np.linspace(-4, 3, nbins_a + 1),
+                              np.linspace(-3, 4, nbins_a + 1)],
+                              dims=['dim_1', f'{data_a.name}_bins'])
+
+        h = histogram(data_a, dim='dim_0', bins=[bins_a])
+
+        assert h.shape == (nbins_a, 2)
+
+        def _np_hist(*args, **kwargs):
+            h, _ = np.histogram(*args, **kwargs)
+            return h
+
+        hist = np.apply_along_axis(
+            _np_hist, axis=0, arr=data_a.values,
+            bins=[bins_a]
+        )
+
+        np.testing.assert_allclose(hist, h.values)
