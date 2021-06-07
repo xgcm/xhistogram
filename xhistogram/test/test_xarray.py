@@ -213,7 +213,7 @@ class TestMultiDimensionalBins:
     def test_bin_dataarrays_with_extra_dims(self):
         data = xr.DataArray([0], dims=["x"], name="a")
         bins = xr.DataArray([[1]], dims=["bad", "a_bin"])
-        with pytest.raises(ValueError, match="will not be broadcast"):
+        with pytest.raises(ValueError, match="not present in data"):
             histogram(data, dim="x", bins=[bins])
 
     def test_bin_dataarrays_without_reduce_dim(self):

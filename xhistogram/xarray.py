@@ -183,10 +183,12 @@ def histogram(
                 output_shape = a0.isel(**{d: 0 for d in dim}, drop=True)
             aligned_bin_coord, _ = xr.align(bin, output_shape, join="exact")
 
-            # TODO check correct dimensions exist
+            # check correct dimensions exist
             if new_dim not in aligned_bin_coord.dims:
                 raise ValueError(
                     f"bins DataArray does not contain dimension {new_dim}")
+            if any(d not in output_dims for d in aligned_bin_coord.dims):
+                raise ValueError("dimensions present in bins not present in data")
 
             # Need to align so that the var_bins dim is last, similar to the reduce dims on the data
             bin_coord = aligned_bin_coord.transpose(new_dim, ...)
