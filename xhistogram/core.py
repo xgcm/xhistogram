@@ -14,6 +14,7 @@ from numpy import (
     ravel_multi_index,
     concatenate,
     broadcast_arrays,
+    broadcast_to,
 )
 
 # range is a keyword so save the builtin so they can use it.
@@ -152,6 +153,11 @@ def _bincount_2d_vectorized(
 
     nrows, ncols = a0.shape
 
+    #bins = [np.expand_dims(b, axis=0) if b.ndim == 1 else b for b in bins]
+
+    # TODO assuming all bins have same form here
+    b0 = bins[0]
+
     # a marginally faster implementation would be to use searchsorted,
     # like numpy histogram itself does
     # https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L864-L882
@@ -162,7 +168,12 @@ def _bincount_2d_vectorized(
     # https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/calibration.py#L592
     # but a better approach would be to use something like _search_sorted_inclusive() in
     # numpy histogram. This is an additional motivation for moving to searchsorted
-    #bins = [np.concatenate((b[:-1], b[-1:] + 1e-8)) for b in bins]
+    # TODO wouldn't need ifs if we just promoted all bins to 2D
+
+    if b0.ndim == 1:
+        bins = [np.concatenate((b[:-1], b[-1:] + 1e-8)) for b in bins]
+    elif b0.ndim == 2:
+        bins = [np.concatenate((b[:, :-1], b[:, -1:] + 1e-8), axis=1) for b in bins]
 
     # the maximum possible value of of digitize is nbins
     # for right=False:
@@ -170,14 +181,12 @@ def _bincount_2d_vectorized(
     #   - i corresponds to bins[i-1] <= a < b[i]
     #   - nbins corresponds to a a >= b[1]
 
-    # TODO assuming all bins have same form here
-    b = bins[0]
-    if b.ndim == 1:
+    if b0.ndim == 1:
         nbins = [len(b) for b in bins]
         hist_shapes = [nb + 1 for nb in nbins]
 
         each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
-    elif b.ndim == 2:
+    elif b0.ndim == 2:
         nbins = [b.shape[1] for b in bins]
         hist_shapes = [nb + 1 for nb in nbins]
 
@@ -211,16 +220,18 @@ def _bincount_2d_vectorized(
     return bin_counts
 
 
-def _bincount(*all_arrays, weights=False, axis=None, density=None):
+def _bincount(*all_arrays, weights=False, axis=None, density=False):
+
+    all_arrays = list(all_arrays)
+
+    weights_array = all_arrays.pop()
 
     # TODO a more robust way to pass the bins together with the arrays
     n_args = len(all_arrays) // 2
     arrays = all_arrays[:n_args]
-    print(arrays[0].shape)
     bins = all_arrays[n_args:]
-    print(bins[0].shape)
 
-    # is this necessary?
+    # is this necessary? (it is necessary for the weights to match the data)
     all_arrays_broadcast = broadcast_arrays(*arrays)
 
     a0 = all_arrays_broadcast[0]
@@ -249,19 +260,24 @@ def _bincount(*all_arrays, weights=False, axis=None, density=None):
             dims_1 = c.shape[split_idx:]
             new_dim_0 = np.prod(dims_0)
             new_dim_1 = np.prod(dims_1)
+            # TODO integer vs float logic here is not robust
             d = reshape(c, (new_dim_0, new_dim_1))
         return d
 
     all_arrays_reshaped = [reshape_input(a) for a in all_arrays_broadcast]
-    bins_reshaped = [reshape_input(b) for b in bins]
 
-    if weights:
-        weights_array = all_arrays_reshaped.pop()
+    if any(b.ndim > 1 for b in bins):
+        bins_reshaped = [reshape_input(b) for b in bins]
     else:
-        weights_array = None
+        bins_reshaped = bins
+    if weights:
+        weights_broadcast = broadcast_to(weights_array, a0.shape)
+        weights_reshaped = reshape_input(weights_broadcast)
+    else:
+        weights_reshaped = None
 
     bin_counts = _bincount_2d_vectorized(
-        *all_arrays_reshaped, bins=bins_reshaped, weights=weights_array
+        *all_arrays_reshaped, bins=bins_reshaped, weights=weights_reshaped
     )
 
     final_shape = kept_axes_shape + bin_counts.shape[1:]
@@ -377,8 +393,8 @@ def histogram(
     all_arrays = list(args)
     n_inputs = len(all_arrays)
 
+    # TODO make feeding weights in less janky
     if weights is not None:
-        all_arrays.append(weights)
         has_weights = True
     else:
         has_weights = False
@@ -466,7 +482,7 @@ def histogram(
         bin_counts = bin_counts.sum(drop_axes)
     else:
         # drop the extra axis used for summing over blocks
-        bin_counts = _bincount(*(all_arrays + bins), **bincount_kwargs).squeeze(drop_axes)
+        bin_counts = _bincount(*(all_arrays + bins + [weights]), **bincount_kwargs).squeeze(drop_axes)
 
     if density:
         # Normalise by dividing by bin counts and areas such that all the
