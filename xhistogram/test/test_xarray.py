@@ -254,11 +254,6 @@ class TestMultiDimensionalBins:
             h, _ = np.histogram(*args, **kwargs)
             return h
 
-        #hist = np.apply_along_axis(
-        #    _np_hist, axis=0, arr=data_a.values,
-        #    bins=[bins_a]
-        #)
-
 
         hist = np.stack([_np_hist(data_a.values[0, :], bins=bins_a[0, :]),
                          _np_hist(data_a.values[1, :], bins=bins_a[1, :])])

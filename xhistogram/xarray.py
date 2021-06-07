@@ -218,7 +218,6 @@ def histogram(
 
     all_coords = {}
     all_coords.update(old_dim_coords)
-    print(bin_centers)
     all_coords.update({b.name: b for b in bin_centers})
     # add compatible coords
     if keep_coords:
@@ -228,11 +227,6 @@ def histogram(
 
     output_name = "_".join(["histogram"] + [a.name for a in args[:N_args]])
 
-    print(h_data)
-    print(h_data.shape)
-    print(output_dims)
-    print(all_coords)
-    print(output_name)
     da_out = xr.DataArray(h_data, dims=output_dims, coords=all_coords, name=output_name)
 
     if density:
