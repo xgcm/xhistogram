@@ -145,14 +145,12 @@ def _bincount_2d_vectorized(
     # consistency checks for inputa
     for a, b in zip(args, bins):
         assert a.ndim == 2
-        assert b.ndim == 1
+        #assert b.ndim == 1
         assert a.shape == a0.shape
     if weights is not None:
         assert weights.shape == a0.shape
 
     nrows, ncols = a0.shape
-    nbins = [len(b) for b in bins]
-    hist_shapes = [nb + 1 for nb in nbins]
 
     # a marginally faster implementation would be to use searchsorted,
     # like numpy histogram itself does
@@ -164,14 +162,35 @@ def _bincount_2d_vectorized(
     # https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/calibration.py#L592
     # but a better approach would be to use something like _search_sorted_inclusive() in
     # numpy histogram. This is an additional motivation for moving to searchsorted
-    bins = [np.concatenate((b[:-1], b[-1:] + 1e-8)) for b in bins]
+    #bins = [np.concatenate((b[:-1], b[-1:] + 1e-8)) for b in bins]
 
     # the maximum possible value of of digitize is nbins
     # for right=False:
     #   - 0 corresponds to a < b[0]
     #   - i corresponds to bins[i-1] <= a < b[i]
     #   - nbins corresponds to a a >= b[1]
-    each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
+
+    # TODO assuming all bins have same form here
+    b = bins[0]
+    if b.ndim == 1:
+        nbins = [len(b) for b in bins]
+        hist_shapes = [nb + 1 for nb in nbins]
+
+        each_bin_indices = [digitize(a, b) for a, b in zip(args, bins)]
+    elif b.ndim == 2:
+        nbins = [b.shape[1] for b in bins]
+        hist_shapes = [nb + 1 for nb in nbins]
+
+        # Apply digitize separately to each row with different bins
+        each_bin_indices = []
+        for a, b in zip(args, bins):
+            each_bin_indices_single_var = np.stack([digitize(a[row, :], b[row, :])
+                                                   for row in np.arange(a.shape[0])])
+            each_bin_indices.append(each_bin_indices_single_var)
+
+    # TODO check if this array is correct!
+    print(each_bin_indices)
+
     # product of the bins gives the joint distribution
     if N_inputs > 1:
         bin_indices = ravel_multi_index(each_bin_indices, hist_shapes)

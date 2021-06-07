@@ -212,7 +212,7 @@ def test_input_type_check():
 class TestMultiDimensionalBins:
     def test_bin_dataarrays_with_extra_dims(self):
         data = xr.DataArray([0], dims=["x"], name="a")
-        bins = xr.DataArray([[1]], dims=["bad", "a_bins"])
+        bins = xr.DataArray([[1]], dims=["bad", "a_bin"])
         with pytest.raises(ValueError, match="will not be broadcast"):
             histogram(data, dim="x", bins=[bins])
 
@@ -227,7 +227,7 @@ class TestMultiDimensionalBins:
         data_a = example_dataarray(shape=(10, 12))
         nbins_a = 8
         bins_a = xr.DataArray(np.linspace(-4, 4, nbins_a + 1),
-                              dims=f'{data_a.name}_bins')
+                              dims=f'{data_a.name}_bin')
 
         h = histogram(data_a, bins=[bins_a])
 
@@ -242,19 +242,25 @@ class TestMultiDimensionalBins:
         nbins_a = 7
         bins_a = xr.DataArray([np.linspace(-4, 3, nbins_a + 1),
                               np.linspace(-3, 4, nbins_a + 1)],
-                              dims=['dim_1', f'{data_a.name}_bins'])
+                              dims=['dim_1', f'{data_a.name}_bin'])
 
         h = histogram(data_a, dim='dim_0', bins=[bins_a])
 
-        assert h.shape == (nbins_a, 2)
+        print(h)
+
+        assert h.shape == (2, nbins_a)
 
         def _np_hist(*args, **kwargs):
             h, _ = np.histogram(*args, **kwargs)
             return h
 
-        hist = np.apply_along_axis(
-            _np_hist, axis=0, arr=data_a.values,
-            bins=[bins_a]
-        )
+        #hist = np.apply_along_axis(
+        #    _np_hist, axis=0, arr=data_a.values,
+        #    bins=[bins_a]
+        #)
+
+
+        hist = np.stack([_np_hist(data_a.values[0, :], bins=bins_a[0, :]),
+                         _np_hist(data_a.values[1, :], bins=bins_a[1, :])])
 
         np.testing.assert_allclose(hist, h.values)

@@ -160,18 +160,6 @@ def histogram(
     if isinstance(dim, str):
         dim = (dim,)
 
-    # align bins if DataArrays
-    # TODO check correct dimensions exist
-    # Drop dimensions that will be reduced along before aligning bins
-    output_shape = a0.isel(**{d: 0 for d in dim}, drop=True)
-    aligned_bins = []
-    for bin in bins:
-        if isinstance(bin, xr.DataArray):
-            aligned_bin, _ = xr.align(bin, output_shape, join="exact")
-            aligned_bins.append(aligned_bin.values)
-        else:
-            aligned_bins.append(bin)
-
     if dim is not None:
         dims_to_keep = [d for d in all_dims_ordered if d not in dim]
         axis = [args_transposed[0].get_axis_num(d) for d in dim]
@@ -179,33 +167,63 @@ def histogram(
         dims_to_keep = []
         axis = None
 
+    # create output dims
+    new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
+    output_dims = dims_to_keep + new_dims
+
+    # align bins if DataArrays
+    # Need to align so that the var_bins dim is last, similar to the reduce dims on the data
+    # TODO check correct dimensions exist
+    # Drop dimensions that will be reduced along before aligning bins
+    if dim is None:
+        output_shape = a0
+    else:
+        output_shape = a0.isel(**{d: 0 for d in dim}, drop=True)
+    aligned_bins = []
+    for bin, new_dim in zip(bins, new_dims):
+        if isinstance(bin, xr.DataArray):
+            aligned_bin, _ = xr.align(bin, output_shape, join="exact")
+            if new_dim not in aligned_bin.dims:
+                raise ValueError(f"bins DataArray does not contain dimension {new_dim}")
+            aligned_bin = aligned_bin.transpose(new_dim, ...)
+            aligned_bins.append(aligned_bin)
+            print(aligned_bin)
+        else:
+            aligned_bins.append(bin)
+
     h_data, bins = _histogram(
         *args_data,
         weights=weights_data,
-        bins=aligned_bins,
+        bins=[b.values for b in aligned_bins],
         range=range,
         axis=axis,
         density=density,
         block_size=block_size,
     )
 
-    # create output dims
-    new_dims = [a.name + bin_dim_suffix for a in args[:N_args]]
-    output_dims = dims_to_keep + new_dims
-
     # create new coords
-    bin_centers = [0.5 * (bin[:-1] + bin[1:]) for bin in bins]
-    new_coords = {
-        name: ((name,), bin_center, a.attrs)
-        for name, bin_center, a in zip(new_dims, bin_centers, args)
-    }
+    #bin_centers = [0.5 * (bin[:-1] + bin[1:]) for bin in bins]
+    #new_coords = {
+    #    name: ((name,), bin_center, a.attrs)
+    #    for name, bin_center, a in zip(new_dims, bin_centers, args)
+    #}
+    # Adjust bin coords to return positions of bin centres rather than bin edges
+    def _find_centers(da, dim):
+        return 0.5 * (da.isel(**{dim: slice(None, -1, None)})
+                      + da.isel(**{dim: slice(1, None, None)}))
+
+    bin_centers = [
+        _find_centers(bin, new_bin_dim) for bin, new_bin_dim in zip(aligned_bins, new_dims)
+    ]
+
 
     # old coords associated with dims
     old_dim_coords = {name: a0[name] for name in dims_to_keep if name in a_coords}
 
     all_coords = {}
     all_coords.update(old_dim_coords)
-    all_coords.update(new_coords)
+    print(bin_centers)
+    all_coords.update({b.name: b for b in bin_centers})
     # add compatible coords
     if keep_coords:
         for c in a_coords:
@@ -214,6 +232,11 @@ def histogram(
 
     output_name = "_".join(["histogram"] + [a.name for a in args[:N_args]])
 
+    print(h_data)
+    print(h_data.shape)
+    print(output_dims)
+    print(all_coords)
+    print(output_name)
     da_out = xr.DataArray(h_data, dims=output_dims, coords=all_coords, name=output_name)
 
     if density:
