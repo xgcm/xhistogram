@@ -182,6 +182,7 @@ def test_histogram_results_3d_density():
     np.testing.assert_allclose(integral, 1.0)
 
 
+# TODO parametrize this over axes so there is only one assert per test
 @pytest.mark.parametrize("block_size", [None, 5, "auto"])
 @pytest.mark.parametrize("use_dask", [False, True])
 def test_histogram_shape(use_dask, block_size):

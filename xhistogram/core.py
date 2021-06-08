@@ -415,14 +415,16 @@ def histogram(
     # to write a version of this that doesn't trigger when `range` is provided, but
     # for now let's just use np.histogram_bin_edges
     if is_dask_array:
-        if not all([isinstance(b, np.ndarray) for b in bins]):
+        if not all([isinstance(b, np.ndarray) for b in formatted_bins]):
             raise TypeError(
                 "When using dask arrays, bins must be provided as numpy array(s) of edges"
             )
+        bins = formatted_bins
     else:
         bins = []
         for a, b, r in zip(all_arrays, formatted_bins, range):
             if isinstance(b, np.ndarray):
+                # account for possibility that bins is a >1d numpy array
                 pass
             else:
                 b = np.histogram_bin_edges(a, b, r)
@@ -464,7 +466,8 @@ def histogram(
             blockwise_args.append(input_index)
 
         # Bins arrays do not contain axes which will get reduced along
-        bins_input_index = tuple(ii for ii in out_index if ii not in drop_axes)
+        # TODO incorrect for >1D bins - how do we know what broadcast axes are on bins here?
+        bins_input_index = tuple(new_axes.keys())
         for b in bins:
             blockwise_args.append(b)
             blockwise_args.append(bins_input_index)
