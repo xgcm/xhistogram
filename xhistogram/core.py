@@ -431,6 +431,12 @@ def histogram(
             bins.append(b)
     bincount_kwargs = dict(weights=has_weights, axis=axis, density=density)
 
+    # broadcast bins to match reduced data
+    # TODO assumes all bins arguments have the same shape
+    b0 = bins[0]
+    broadcast_bins_shape = [ii for ii in a0.shape if ii not in axis] + list(b0.shape)
+    bins = [np.broadcast_to(b, broadcast_bins_shape) for b in bins]
+
     # keep these axes in the inputs
     if axis is not None:
         drop_axes = tuple([ii for ii in input_index if ii in axis])
