@@ -257,8 +257,8 @@ def histogram(
     Parameters
     ----------
     args : array_like
-        Input data. The number of input arguments determines the dimensonality
-        of the histogram. For example, two arguments prodocue a 2D histogram.
+        Input data. The number of input arguments determines the dimensionality
+        of the histogram. For example, two arguments produce a 2D histogram.
         All args must have the same size.
     bins :  int, str or numpy array or a list of ints, strs and/or arrays, optional
         If a list, there should be one entry for each item in ``args``.
@@ -368,7 +368,7 @@ def histogram(
     bins = _ensure_correctly_formatted_bins(bins, n_inputs)
     range = _ensure_correctly_formatted_range(range, n_inputs)
 
-    # histogram_bin_edges trigges computation on dask arrays. It would be possible
+    # histogram_bin_edges triggers computation on dask arrays. It would be possible
     # to write a version of this that doesn't trigger when `range` is provided, but
     # for now let's just use np.histogram_bin_edges
     if is_dask_array:
@@ -432,7 +432,7 @@ def histogram(
         bin_counts = _bincount(*all_arrays, **bincount_kwargs).squeeze(drop_axes)
 
     if density:
-        # Normalise by dividing by bin counts and areas such that all the
+        # Normalize by dividing by bin counts and areas such that all the
         # histogram data integrated over all dimensions = 1
         bin_widths = [np.diff(b) for b in bins]
         if n_inputs == 1:
