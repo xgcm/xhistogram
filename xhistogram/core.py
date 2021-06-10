@@ -193,11 +193,7 @@ def _bincount_2d_vectorized(
 
 
 def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
-
-    # is this necessary?
-    all_arrays_broadcast = broadcast_arrays(*all_arrays)
-
-    a0 = all_arrays_broadcast[0]
+    a0 = all_arrays[0]
 
     do_full_array = (axis is None) or (set(axis) == set(_range(a0.ndim)))
 
@@ -226,7 +222,7 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
             d = reshape(c, (new_dim_0, new_dim_1))
         return d
 
-    all_arrays_reshaped = [reshape_input(a) for a in all_arrays_broadcast]
+    all_arrays_reshaped = [reshape_input(a) for a in all_arrays]
 
     if weights:
         weights_array = all_arrays_reshaped.pop()
@@ -358,11 +354,10 @@ def histogram(
 
     dtype = "i8" if not has_weights else weights.dtype
 
-    # here I am assuming all the arrays have the same shape
-    # probably needs to be generalized
-    input_indexes = [tuple(_range(a.ndim)) for a in all_arrays]
-    input_index = input_indexes[0]
-    assert all([ii == input_index for ii in input_indexes])
+    # Broadcast input arrays. Note that this dispatches to `dsa.broadcast_arrays` as necessary.
+    all_arrays = broadcast_arrays(*all_arrays)
+    # Since all arrays now have the same shape, just get the axes of the first.
+    input_axes = tuple(_range(all_arrays[0].ndim))
 
     # Some sanity checks and format bins and range correctly
     bins = _ensure_correctly_formatted_bins(bins, n_inputs)
@@ -372,7 +367,7 @@ def histogram(
     # to write a version of this that doesn't trigger when `range` is provided, but
     # for now let's just use np.histogram_bin_edges
     if is_dask_array:
-        if not all([isinstance(b, np.ndarray) for b in bins]):
+        if not all(isinstance(b, np.ndarray) for b in bins):
             raise TypeError(
                 "When using dask arrays, bins must be provided as numpy array(s) of edges"
             )
@@ -382,11 +377,11 @@ def histogram(
         ]
     bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
 
-    # keep these axes in the inputs
+    # remove these axes from the inputs
     if axis is not None:
-        drop_axes = tuple([ii for ii in input_index if ii in axis])
+        drop_axes = tuple(axis)
     else:
-        drop_axes = input_index
+        drop_axes = input_axes
 
     if _any_dask_array(weights, *all_arrays):
         # We should be able to just apply the bin_count function to every
@@ -405,16 +400,14 @@ def histogram(
 
         adjust_chunks = {i: (lambda x: 1) for i in drop_axes}
 
-        new_axes = {
-            max(input_index) + 1 + i: axis_len
-            for i, axis_len in enumerate([len(bin) - 1 for bin in bins])
-        }
-        out_index = input_index + tuple(new_axes)
+        new_axes_start = max(input_axes) + 1
+        new_axes = {new_axes_start + i: len(bin) - 1 for i, bin in enumerate(bins)}
+        out_index = input_axes + tuple(new_axes)
 
         blockwise_args = []
         for arg in all_arrays:
             blockwise_args.append(arg)
-            blockwise_args.append(input_index)
+            blockwise_args.append(input_axes)
 
         bin_counts = dsa.blockwise(
             _bincount,
