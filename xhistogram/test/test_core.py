@@ -122,6 +122,34 @@ def test_histogram_results_2d():
     np.testing.assert_array_equal(hist, h)
 
 
+@pytest.mark.parametrize("dask", [False, True])
+def test_histogram_results_2d_broadcasting(dask):
+    nrows, ncols = 5, 20
+    data_a = np.random.randn(ncols)
+    data_b = np.random.randn(nrows, ncols)
+    nbins_a = 9
+    bins_a = np.linspace(-4, 4, nbins_a + 1)
+    nbins_b = 10
+    bins_b = np.linspace(-4, 4, nbins_b + 1)
+
+    if dask:
+        test_data_a = dsa.from_array(data_a, chunks=3)
+        test_data_b = dsa.from_array(data_b, chunks=(2, 7))
+    else:
+        test_data_a = data_a
+        test_data_b = data_b
+
+    h, _ = histogram(test_data_a, test_data_b, bins=[bins_a, bins_b])
+    assert h.shape == (nbins_a, nbins_b)
+
+    hist, _, _ = np.histogram2d(
+        np.broadcast_to(data_a, data_b.shape).ravel(),
+        data_b.ravel(),
+        bins=[bins_a, bins_b],
+    )
+    np.testing.assert_array_equal(hist, h)
+
+
 def test_histogram_results_2d_density():
     nrows, ncols = 5, 20
     data_a = np.random.randn(nrows, ncols)
@@ -228,7 +256,7 @@ def test_histogram_shape(use_dask, block_size):
 
 
 def test_histogram_dask():
-    """ Test that fails with dask arrays and inappropriate bins"""
+    """Test that fails with dask arrays and inappropriate bins"""
     shape = 10, 15, 12, 20
     b = empty_dask_array(shape, chunks=(1,) + shape[1:])
     histogram(b, bins=bins_arr)  # Should work when bins is all numpy arrays
@@ -255,7 +283,7 @@ def test_histogram_dask():
     ],
 )
 def test_ensure_correctly_formatted_bins(in_out):
-    """ Test the helper function _ensure_correctly_formatted_bins"""
+    """Test the helper function _ensure_correctly_formatted_bins"""
     bins_in, n, bins_expected = in_out
     if bins_expected is not None:
         bins = _ensure_correctly_formatted_bins(bins_in, n)
@@ -277,7 +305,7 @@ def test_ensure_correctly_formatted_bins(in_out):
     ],
 )
 def test_ensure_correctly_formatted_range(in_out):
-    """ Test the helper function _ensure_correctly_formatted_range"""
+    """Test the helper function _ensure_correctly_formatted_range"""
     range_in, n, range_expected = in_out
     if range_expected is not None:
         range_ = _ensure_correctly_formatted_range(range_in, n)
