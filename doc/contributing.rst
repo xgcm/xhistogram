@@ -150,6 +150,9 @@ v0.2.1 (not yet released)
   xhistogram that mimic the numpy histogram API. This included
   adding a range argument to the xhistogram API :issue:`13`.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Added a function to check if the object passed to xhist() is an
+  xarray.DataArray and if not, throw an error. :issue:`14`.
+  By `Yang Yunyi <https://github.com/Badboy-16>`_.
 
 v0.2.0
 ~~~~~~
