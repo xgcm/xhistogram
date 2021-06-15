@@ -154,8 +154,8 @@ def _bincount_2d_vectorized(
     nbins = [len(b) for b in bins]
     hist_shapes = [nb + 1 for nb in nbins]
 
-    # The maximum possible value of of digitize is nbins
-    # for _digitize_inclusive:
+    # The maximum possible value of digitize is nbins
+    # For _digitize_inclusive:
     #   - 0 corresponds to a < b[0]
     #   - i corresponds to b[i-1] <= a < b[i]
     #   - nbins-1 corresponds to b[-2] <= a <= b[-1]
