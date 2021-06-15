@@ -3,10 +3,11 @@ Numpy API for xhistogram.
 """
 
 
+import dask
 import numpy as np
 from functools import reduce
-from .duck_array_ops import (
-    where,
+from collections.abc import Iterable
+from numpy import (
     digitize,
     bincount,
     reshape,
@@ -15,14 +16,58 @@ from .duck_array_ops import (
     broadcast_arrays,
 )
 
+# range is a keyword so save the builtin so they can use it.
+_range = range
 
-def _ensure_bins_is_a_list_of_arrays(bins, N_expected):
+try:
+    import dask.array as dsa
+
+    has_dask = True
+except ImportError:
+    has_dask = False
+
+
+def _any_dask_array(*args):
+    if not has_dask:
+        return False
+    else:
+        return any(isinstance(a, dsa.core.Array) for a in args)
+
+
+def _ensure_correctly_formatted_bins(bins, N_expected):
+    # TODO: This could be done better / more robustly
+    if bins is None:
+        raise ValueError("bins must be provided")
+    if isinstance(bins, (int, str, np.ndarray)):
+        bins = N_expected * [bins]
     if len(bins) == N_expected:
         return bins
-    elif N_expected == 1:
-        return [bins]
     else:
-        raise ValueError("Can't figure out what to do with bins.")
+        raise ValueError(
+            "The number of bin definitions doesn't match the number of args"
+        )
+
+
+def _ensure_correctly_formatted_range(range_, N_expected):
+    # TODO: This could be done better / more robustly
+    def _iterable_nested(x):
+        return all(isinstance(i, Iterable) for i in x)
+
+    if range_ is not None:
+        if (len(range_) == 2) & (not _iterable_nested(range_)):
+            return N_expected * [range_]
+        elif N_expected == len(range_):
+            if all(len(x) == 2 for x in range_):
+                return range_
+            else:
+                raise ValueError(
+                    "range should be provided as (lower_range, upper_range). In the "
+                    + "case of multiple args, range should be a list of such tuples"
+                )
+        else:
+            raise ValueError("The number of ranges doesn't match the number of args")
+    else:
+        return N_expected * [range_]
 
 
 def _bincount_2d(bin_indices, weights, N, hist_shapes):
@@ -89,7 +134,7 @@ def _dispatch_bincount(bin_indices, weights, N, hist_shapes, block_size=None):
         return _bincount_loop(bin_indices, weights, N, hist_shapes, block_chunks)
 
 
-def _histogram_2d_vectorized(
+def _bincount_2d_vectorized(
     *args, bins=None, weights=None, density=False, right=False, block_size=None
 ):
     """Calculate the histogram independently on each row of a 2D array"""
@@ -122,7 +167,7 @@ def _histogram_2d_vectorized(
         bin_indices = digitize(a, b)
         on_edge = a == b[-1]
         # Need to use `where` here rather the simple indexing for dask compatibility
-        return where(on_edge, bin_indices - 1, bin_indices)
+        return bin_indices[on_edge] -= 1
 
     each_bin_indices = [_digitize_inclusive(a, b) for a, b in zip(args, bins)]
     # product of the bins gives the joint distribution
@@ -145,34 +190,102 @@ def _histogram_2d_vectorized(
     return bin_counts
 
 
+def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
+    a0 = all_arrays[0]
+
+    do_full_array = (axis is None) or (set(axis) == set(_range(a0.ndim)))
+
+    if do_full_array:
+        kept_axes_shape = (1,) * a0.ndim
+    else:
+        kept_axes_shape = tuple(
+            [a0.shape[i] if i not in axis else 1 for i in _range(a0.ndim)]
+        )
+
+    def reshape_input(a):
+        if do_full_array:
+            d = a.ravel()[None, :]
+        else:
+            # reshape the array to 2D
+            # axis 0: preserved axis after histogram
+            # axis 1: calculate histogram along this axis
+            new_pos = tuple(_range(-len(axis), 0))
+            c = np.moveaxis(a, axis, new_pos)
+            split_idx = c.ndim - len(axis)
+            dims_0 = c.shape[:split_idx]
+            # assert dims_0 == kept_axes_shape
+            dims_1 = c.shape[split_idx:]
+            new_dim_0 = np.prod(dims_0)
+            new_dim_1 = np.prod(dims_1)
+            d = reshape(c, (new_dim_0, new_dim_1))
+        return d
+
+    all_arrays_reshaped = [reshape_input(a) for a in all_arrays]
+
+    if weights:
+        weights_array = all_arrays_reshaped.pop()
+    else:
+        weights_array = None
+
+    bin_counts = _bincount_2d_vectorized(
+        *all_arrays_reshaped, bins=bins, weights=weights_array, density=density
+    )
+
+    final_shape = kept_axes_shape + bin_counts.shape[1:]
+    bin_counts = reshape(bin_counts, final_shape)
+
+    return bin_counts
+
+
 def histogram(
-    *args, bins=None, axis=None, weights=None, density=False, block_size="auto"
+    *args,
+    bins=None,
+    range=None,
+    axis=None,
+    weights=None,
+    density=False,
+    block_size="auto",
 ):
     """Histogram applied along specified axis / axes.
 
     Parameters
     ----------
     args : array_like
-        Input data. The number of input arguments determines the dimensonality
-        of the histogram. For example, two arguments prodocue a 2D histogram.
+        Input data. The number of input arguments determines the dimensionality
+        of the histogram. For example, two arguments produce a 2D histogram.
         All args must have the same size.
-    bins :  int or array_like or a list of ints or arrays, optional
+    bins :  int, str or numpy array or a list of ints, strs and/or arrays, optional
         If a list, there should be one entry for each item in ``args``.
-        The bin specification:
+        The bin specifications are as follows:
 
-          * If int, the number of bins for all arguments in ``args``.
-          * If array_like, the bin edges for all arguments in ``args``.
-          * If a list of ints, the number of bins  for every argument in ``args``.
-          * If a list arrays, the bin edges for each argument in ``args``
-            (required format for Dask inputs).
-          * A combination [int, array] or [array, int], where int
-            is the number of bins and array is the bin edges.
+          * If int; the number of bins for all arguments in ``args``.
+          * If str; the method used to automatically calculate the optimal bin width
+            for all arguments in ``args``, as defined by numpy `histogram_bin_edges`.
+          * If numpy array; the bin edges for all arguments in ``args``.
+          * If a list of ints, strs and/or arrays; the bin specification as
+            above for every argument in ``args``.
 
         When bin edges are specified, all but the last (righthand-most) bin include
         the left edge and exclude the right edge. The last bin includes both edges.
 
-        A ``TypeError`` will be raised if ``args`` contains dask arrays and
-        ``bins`` are not specified explicitly as a list of arrays.
+        A TypeError will be raised if args contains dask arrays and bins are not
+        specified explicitly as an array or list of arrays. This is because other
+        bin specifications trigger computation.
+    range : (float, float) or a list of (float, float), optional
+        If a list, there should be one entry for each item in ``args``.
+        The range specifications are as follows:
+
+          * If (float, float); the lower and upper range(s) of the bins for all
+            arguments in ``args``. Values outside the range are ignored. The first
+            element of the range must be less than or equal to the second. `range`
+            affects the automatic bin computation as well. In this case, while bin
+            width is computed to be optimal based on the actual data within `range`,
+            the bin count will fill the entire range including portions containing
+            no data.
+          * If a list of (float, float); the ranges as above for every argument in
+            ``args``.
+          * If not provided, range is simply ``(arg.min(), arg.max())`` for each
+            arg.
     axis : None or int or tuple of ints, optional
         Axis or axes along which the histogram is computed. The default is to
         compute the histogram of the flattened array
@@ -201,6 +314,8 @@ def histogram(
     -------
     hist : array
         The values of the histogram.
+    bin_edges : list of arrays
+        Return the bin edges for each input array.
 
     See Also
     --------
@@ -209,6 +324,9 @@ def histogram(
 
     a0 = args[0]
     ndim = a0.ndim
+    n_inputs = len(args)
+
+    is_dask_array = any([dask.is_dask_collection(a) for a in args])
 
     if axis is not None:
         axis = np.atleast_1d(axis)
@@ -221,57 +339,91 @@ def histogram(
                 ax_positive = ndim + ax
             assert ax_positive < ndim, "axis must be less than ndim"
             axis_normed.append(ax_positive)
-        axis = np.atleast_1d(axis_normed)
+        axis = [int(i) for i in axis_normed]
 
-    do_full_array = (axis is None) or (set(axis) == set(range(a0.ndim)))
-    if do_full_array:
-        kept_axes_shape = None
-    else:
-        kept_axes_shape = tuple([a0.shape[i] for i in range(a0.ndim) if i not in axis])
-
-    all_args = list(args)
-    if weights is not None:
-        all_args += [weights]
-    all_args_broadcast = broadcast_arrays(*all_args)
-
-    def reshape_input(a):
-        if do_full_array:
-            d = a.ravel()[None, :]
-        else:
-            # reshape the array to 2D
-            # axis 0: preserved axis after histogram
-            # axis 1: calculate histogram along this axis
-            new_pos = tuple(range(-len(axis), 0))
-            c = np.moveaxis(a, axis, new_pos)
-            split_idx = c.ndim - len(axis)
-            dims_0 = c.shape[:split_idx]
-            assert dims_0 == kept_axes_shape
-            dims_1 = c.shape[split_idx:]
-            new_dim_0 = np.prod(dims_0)
-            new_dim_1 = np.prod(dims_1)
-            d = reshape(c, (new_dim_0, new_dim_1))
-        return d
-
-    all_args_reshaped = [reshape_input(a) for a in all_args_broadcast]
+    all_arrays = list(args)
+    n_inputs = len(all_arrays)
 
     if weights is not None:
-        weights_reshaped = all_args_reshaped.pop()
+        all_arrays.append(weights)
+        has_weights = True
     else:
-        weights_reshaped = None
+        has_weights = False
 
-    n_inputs = len(all_args_reshaped)
-    bins = _ensure_bins_is_a_list_of_arrays(bins, n_inputs)
+    dtype = "i8" if not has_weights else weights.dtype
 
-    bin_counts = _histogram_2d_vectorized(
-        *all_args_reshaped,
-        bins=bins,
-        weights=weights_reshaped,
-        density=density,
-        block_size=block_size,
-    )
+    # Broadcast input arrays. Note that this dispatches to `dsa.broadcast_arrays` as necessary.
+    all_arrays = broadcast_arrays(*all_arrays)
+    # Since all arrays now have the same shape, just get the axes of the first.
+    input_axes = tuple(_range(all_arrays[0].ndim))
+
+    # Some sanity checks and format bins and range correctly
+    bins = _ensure_correctly_formatted_bins(bins, n_inputs)
+    range = _ensure_correctly_formatted_range(range, n_inputs)
+
+    # histogram_bin_edges triggers computation on dask arrays. It would be possible
+    # to write a version of this that doesn't trigger when `range` is provided, but
+    # for now let's just use np.histogram_bin_edges
+    if is_dask_array:
+        if not all(isinstance(b, np.ndarray) for b in bins):
+            raise TypeError(
+                "When using dask arrays, bins must be provided as numpy array(s) of edges"
+            )
+    else:
+        bins = [
+            np.histogram_bin_edges(a, b, r) for a, b, r in zip(all_arrays, bins, range)
+        ]
+    bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
+
+    # remove these axes from the inputs
+    if axis is not None:
+        drop_axes = tuple(axis)
+    else:
+        drop_axes = input_axes
+
+    if _any_dask_array(weights, *all_arrays):
+        # We should be able to just apply the bin_count function to every
+        # block and then sum over all blocks to get the total bin count.
+        # The main challenge is to figure out the chunk shape that will come
+        # out of _bincount. We might also need to add dummy dimensions to sum
+        # over in the _bincount function
+        import dask.array as dsa
+
+        # Important note from blockwise docs
+        # > Any index, like i missing from the output index is interpreted as a contraction...
+        # > In the case of a contraction the passed function should expect an iterable of blocks
+        # > on any array that holds that index.
+        # This means that we need to have all the input indexes present in the output index
+        # However, they will be reduced to singleton (len 1) dimensions
+
+        adjust_chunks = {i: (lambda x: 1) for i in drop_axes}
+
+        new_axes_start = max(input_axes) + 1
+        new_axes = {new_axes_start + i: len(bin) - 1 for i, bin in enumerate(bins)}
+        out_index = input_axes + tuple(new_axes)
+
+        blockwise_args = []
+        for arg in all_arrays:
+            blockwise_args.append(arg)
+            blockwise_args.append(input_axes)
+
+        bin_counts = dsa.blockwise(
+            _bincount,
+            out_index,
+            *blockwise_args,
+            new_axes=new_axes,
+            adjust_chunks=adjust_chunks,
+            meta=np.array((), dtype),
+            **bincount_kwargs,
+        )
+        # sum over the block dims
+        bin_counts = bin_counts.sum(drop_axes)
+    else:
+        # drop the extra axis used for summing over blocks
+        bin_counts = _bincount(*all_arrays, **bincount_kwargs).squeeze(drop_axes)
 
     if density:
-        # Normalise by dividing by bin counts and areas such that all the
+        # Normalize by dividing by bin counts and areas such that all the
         # histogram data integrated over all dimensions = 1
         bin_widths = [np.diff(b) for b in bins]
         if n_inputs == 1:
@@ -286,11 +438,4 @@ def histogram(
     else:
         h = bin_counts
 
-    if h.shape[0] == 1:
-        assert do_full_array
-        h = h.squeeze()
-    else:
-        final_shape = kept_axes_shape + h.shape[1:]
-        h = reshape(h, final_shape)
-
-    return h
+    return h, bins

@@ -199,3 +199,10 @@ def test_carry_coords(keep_coords, number_of_inputs):
         assert "lon" in result.coords
     else:
         assert "lon" not in result.coords
+
+
+# test for issue #14
+def test_input_type_check():
+    np_array = np.arange(100)
+    with pytest.raises(TypeError):
+        histogram(np_array)
