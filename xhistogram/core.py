@@ -436,7 +436,13 @@ def histogram(
             # Slower, but N-dimensional logic
             bin_areas = np.prod(np.ix_(*bin_widths))
 
-        h = bin_counts / bin_areas / bin_counts.sum()
+        # Sum over the last n_inputs axes, which correspond to the bins. All other axes
+        # are "bystander" axes. Sums must be done independently for each bystander axes
+        # so that nans are dealt with correctly (#51)
+        bin_axes = tuple(_range(-n_inputs, 0))
+        bin_count_sums = bin_counts.sum(axis=bin_axes)
+        bin_count_sums_shape = bin_count_sums.shape + len(bin_axes) * (1,)
+        h = bin_counts / bin_areas / reshape(bin_count_sums, bin_count_sums_shape)
     else:
         h = bin_counts
 
