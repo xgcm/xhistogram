@@ -166,8 +166,8 @@ def _bincount_2d_vectorized(
         # see https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L1056
         bin_indices = digitize(a, b)
         on_edge = a == b[-1]
-        # Need to use `where` here rather the simple indexing for dask compatibility
-        return bin_indices[on_edge] -= 1
+        bin_indices[on_edge] -= 1
+        return bin_indices
 
     each_bin_indices = [_digitize_inclusive(a, b) for a, b in zip(args, bins)]
     # product of the bins gives the joint distribution
