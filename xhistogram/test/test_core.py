@@ -331,6 +331,6 @@ def test_histogram_results_datetime(use_dask, block_size):
             np.datetime64("2001-01-01"),
         ]
     )
-    h = histogram(data, bins=bins, block_size=block_size)
+    h = histogram(data, bins=bins, block_size=block_size)[0]
     expected = np.histogram(data, bins=bins)[0]
     np.testing.assert_allclose(h, expected)

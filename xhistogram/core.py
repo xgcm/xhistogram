@@ -8,7 +8,7 @@ import numpy as np
 from functools import reduce
 from collections.abc import Iterable
 from numpy import (
-    digitize,
+    searchsorted,
     bincount,
     reshape,
     ravel_multi_index,
@@ -154,22 +154,25 @@ def _bincount_2d_vectorized(
     nbins = [len(b) for b in bins]
     hist_shapes = [nb + 1 for nb in nbins]
 
-    # The maximum possible value of digitize is nbins
-    # For _digitize_inclusive:
+    # The maximum possible value of searchsorted is nbins
+    # For _searchsorted_inclusive:
     #   - 0 corresponds to a < b[0]
     #   - i corresponds to b[i-1] <= a < b[i]
     #   - nbins-1 corresponds to b[-2] <= a <= b[-1]
     #   - nbins corresponds to a >= b[-1]
-    def _digitize_inclusive(a, b):
-        """Like `digitize`, but where the last bin is also right-edge inclusive."""
+    def _searchsorted_inclusive(a, b):
+        """
+        Like `searchsorted`, but where the last bin is also right-edge inclusive.
+        """
         # Similar to implementation in np.histogramdd
         # see https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L1056
-        bin_indices = digitize(a, b)
+        bin_indices = searchsorted(b, a, side="right")
         on_edge = a == b[-1]
+        # Shift these points one bin to the left.
         bin_indices[on_edge] -= 1
         return bin_indices
 
-    each_bin_indices = [_digitize_inclusive(a, b) for a, b in zip(args, bins)]
+    each_bin_indices = [_searchsorted_inclusive(a, b) for a, b in zip(args, bins)]
     # product of the bins gives the joint distribution
     if N_inputs > 1:
         bin_indices = ravel_multi_index(each_bin_indices, hist_shapes)
@@ -319,7 +322,7 @@ def histogram(
 
     See Also
     --------
-    numpy.histogram, numpy.bincount, numpy.digitize
+    numpy.histogram, numpy.bincount, numpy.searchsorted
     """
 
     a0 = args[0]
