@@ -379,7 +379,10 @@ def histogram(
             )
     else:
         bins = [
-            np.histogram_bin_edges(a, b, r) for a, b, r in zip(all_arrays, bins, range)
+            np.histogram_bin_edges(
+                a, bins=b, range=r, weights=all_arrays[-1] if has_weights else None
+            )
+            for a, b, r in zip(all_arrays, bins, range)
         ]
     bincount_kwargs = dict(
         weights=has_weights,
