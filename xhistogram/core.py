@@ -192,7 +192,9 @@ def _bincount_2d_vectorized(
     return bin_counts
 
 
-def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
+def _bincount(
+    *all_arrays, weights=False, axis=None, bins=None, density=None, block_size=None
+):
     a0 = all_arrays[0]
 
     do_full_array = (axis is None) or (set(axis) == set(_range(a0.ndim)))
@@ -230,7 +232,11 @@ def _bincount(*all_arrays, weights=False, axis=None, bins=None, density=None):
         weights_array = None
 
     bin_counts = _bincount_2d_vectorized(
-        *all_arrays_reshaped, bins=bins, weights=weights_array, density=density
+        *all_arrays_reshaped,
+        bins=bins,
+        weights=weights_array,
+        density=density,
+        block_size=block_size,
     )
 
     final_shape = kept_axes_shape + bin_counts.shape[1:]
@@ -375,7 +381,13 @@ def histogram(
         bins = [
             np.histogram_bin_edges(a, b, r) for a, b, r in zip(all_arrays, bins, range)
         ]
-    bincount_kwargs = dict(weights=has_weights, axis=axis, bins=bins, density=density)
+    bincount_kwargs = dict(
+        weights=has_weights,
+        axis=axis,
+        bins=bins,
+        density=density,
+        block_size=block_size,
+    )
 
     # remove these axes from the inputs
     if axis is not None:
