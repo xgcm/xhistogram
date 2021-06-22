@@ -141,16 +141,25 @@ Release History
 ---------------
 
 
-v0.2.1 (not yet released)
+v0.3.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+- Add support for histograms over non-float dtypes (e.g. datetime
+  objects) :issue:`25`. By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+- Refactor histogram calculation to use dask.array.blockwise
+  when input arguments are dask arrays, resulting in significant
+  performance improvements :issue:`49`. By
+  `Ryan Abernathy <https://github.com/rabernat>`_,
+  `Tom Nicholas <https://github.com/TomNicholas>`_ and
+  `Gabe Joseph <https://github.com/gjoseph92>`_.
 - Fixed bug with density calculation when NaNs are present :issue:`51`.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 - Implemented various options for users for providing bins to
   xhistogram that mimic the numpy histogram API. This included
   adding a range argument to the xhistogram API :issue:`13`.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
-- Added a function to check if the object passed to xhist() is an
+- Added a function to check if the object passed to xhistogram is an
   xarray.DataArray and if not, throw an error. :issue:`14`.
   By `Yang Yunyi <https://github.com/Badboy-16>`_.
 
