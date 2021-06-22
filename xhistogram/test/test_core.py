@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from itertools import combinations
 import dask.array as dsa
@@ -328,3 +329,23 @@ def test_ensure_correctly_formatted_range(in_out):
     else:
         with pytest.raises(ValueError):
             _ensure_correctly_formatted_range(range_in, n)
+
+
+@pytest.mark.parametrize("block_size", [None, 1, 2])
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_histogram_results_datetime(use_dask, block_size):
+    """Test computing histogram of datetime objects"""
+    data = pd.date_range(start="2000-06-01", periods=5)
+    if use_dask:
+        data = dsa.asarray(data, chunks=(5,))
+    # everything should be in the second bin (index 1)
+    bins = np.array(
+        [
+            np.datetime64("1999-01-01"),
+            np.datetime64("2000-01-01"),
+            np.datetime64("2001-01-01"),
+        ]
+    )
+    h = histogram(data, bins=bins, block_size=block_size)[0]
+    expected = np.histogram(data, bins=bins)[0]
+    np.testing.assert_allclose(h, expected)
