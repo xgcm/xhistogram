@@ -166,6 +166,7 @@ def _bincount_2d_vectorized(
         """
         # Similar to implementation in np.histogramdd
         # see https://github.com/numpy/numpy/blob/9c98662ee2f7daca3f9fae9d5144a9a8d3cabe8c/numpy/lib/histograms.py#L1056
+        # This assumes the bins (b) are sorted
         bin_indices = searchsorted(b, a, side="right")
         on_edge = a == b[-1]
         # Shift these points one bin to the left.
