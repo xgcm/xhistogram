@@ -1,0 +1,33 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: xhistogram
+message: >-
+  "If you use this software, please cite it as
+  below."
+type: software
+authors:
+  - family-names: "Abernathey"
+    given-names: "Ryan"
+    orcid: "https://orcid.org/0000-0001-5999-4917"
+  - family-names: "Squire"
+    given-names: "Dougie"
+    orcid: "0000-0003-3271-6874"
+  - family-names: "Nicholas"
+    given-names: "Thomas"
+    orcid: "https://orcid.org/0000-0002-2176-0530"
+  - family-names: "Bourbeau"
+    given-names: "James"
+    orcid: "0000-0003-2164-7789"
+  - family-names: "Joseph"
+    given-names: "Gabe"
+  - family-names: "Spring"
+    given-names: "Aaron"
+    orcid: "0000-0003-0216-2241"
+  - family-names: "Bell"
+    given-names: "Ray"
+    orcid: "https://orcid.org/0000-0003-2623-0587"
+  - family-names: "Bailey"
+    given-names: "Shanice"
+    orcid: "0000-0002-8176-9465"
