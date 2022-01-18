@@ -3,7 +3,6 @@ Numpy API for xhistogram.
 """
 
 
-import dask
 import numpy as np
 from functools import reduce
 from collections.abc import Iterable
@@ -336,7 +335,7 @@ def histogram(
     ndim = a0.ndim
     n_inputs = len(args)
 
-    is_dask_array = any([dask.is_dask_collection(a) for a in args])
+    is_dask_array = _any_dask_array(*args)
 
     if axis is not None:
         axis = np.atleast_1d(axis)
