@@ -278,9 +278,9 @@ def histogram(
         When bin edges are specified, all but the last (righthand-most) bin include
         the left edge and exclude the right edge. The last bin includes both edges.
 
-        A TypeError will be raised if args contains dask arrays and bins are not
-        specified explicitly as an array or list of arrays. This is because other
-        bin specifications trigger computation.
+        A TypeError will be raised if args or weights contains dask arrays and bins
+        are not specified explicitly as an array or list of arrays. This is because
+        other bin specifications trigger computation.
     range : (float, float) or a list of (float, float), optional
         If a list, there should be one entry for each item in ``args``.
         The range specifications are as follows:
