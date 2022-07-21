@@ -9,9 +9,11 @@ from ..core import (
     _ensure_correctly_formatted_bins,
     _ensure_correctly_formatted_range,
 )
-from .fixtures import empty_dask_array
+from .fixtures import empty_dask_array, example_dataarray
 
 import pytest
+
+import contextlib
 
 
 bins_int = 10
@@ -271,15 +273,44 @@ def test_histogram_shape(use_dask, block_size):
             assert isinstance(c, dsa.Array)
 
 
-def test_histogram_dask():
-    """Test that fails with dask arrays and inappropriate bins"""
+@pytest.mark.parametrize("arg_type", ["dask", "numpy"])
+@pytest.mark.parametrize("weights_type", ["dask", "numpy", None])
+@pytest.mark.parametrize("bins_type", ["int", "str", "numpy"])
+def test_histogram_dask(arg_type, weights_type, bins_type):
+    """Test that a TypeError is raised with dask arrays and inappropriate bins"""
     shape = 10, 15, 12, 20
-    b = empty_dask_array(shape, chunks=(1,) + shape[1:])
-    histogram(b, bins=bins_arr)  # Should work when bins is all numpy arrays
-    with pytest.raises(TypeError):  # Should fail otherwise
-        histogram(b, bins=bins_int)
-        histogram(b, bins=bins_str)
-        histogram(b, b, bins=[bins_arr, bins_int])
+
+    if arg_type == "dask":
+        arg = empty_dask_array(shape)
+    else:
+        arg = example_dataarray(shape)
+
+    if weights_type == "dask":
+        weights = empty_dask_array(shape)
+    elif weights_type == "numpy":
+        weights = example_dataarray(shape)
+    else:
+        weights = None
+
+    if bins_type == "int":
+        bins = bins_int
+    elif bins_type == "str":
+        bins = bins_str
+    else:
+        bins = bins_arr
+
+    # TypeError should be returned when
+    # 1. args or weights is a dask array and bins is not a numpy array, or
+    # 2. bins is a string and weights is a numpy array
+    cond_1 = ((arg_type == "dask") | (weights_type == "dask")) & (bins_type != "numpy")
+    cond_2 = (weights_type == "numpy") & (bins_type == "str")
+    should_TypeError = cond_1 | cond_2
+
+    with contextlib.ExitStack() as stack:
+        if should_TypeError:
+            stack.enter_context(pytest.raises(TypeError))
+        histogram(arg, bins=bins, weights=weights)
+        histogram(arg, arg, bins=[bins, bins], weights=weights)
 
 
 @pytest.mark.parametrize(

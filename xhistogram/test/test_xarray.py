@@ -186,7 +186,7 @@ def test_carry_coords(keep_coords, number_of_inputs):
         data, coords=[time_axis, X_axis, Y_axis], dims=["time", "X", "Y"], name="one"
     )
     # faking coordinates
-    da["lon"] = da.X ** 2 + da.Y ** 2
+    da["lon"] = da.X**2 + da.Y**2
     assert "lon" in da.coords
     bins = np.linspace(0, 100, 10)
     result = histogram(

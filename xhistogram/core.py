@@ -336,7 +336,7 @@ def histogram(
     ndim = a0.ndim
     n_inputs = len(args)
 
-    is_dask_array = any([dask.is_dask_collection(a) for a in args])
+    is_dask_array = any([dask.is_dask_collection(a) for a in list(args) + [weights]])
 
     if axis is not None:
         axis = np.atleast_1d(axis)
