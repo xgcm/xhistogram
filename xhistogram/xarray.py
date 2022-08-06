@@ -100,6 +100,7 @@ def histogram(
 
     """
 
+    args = list(args)
     N_args = len(args)
 
     # TODO: allow list of weights as well
