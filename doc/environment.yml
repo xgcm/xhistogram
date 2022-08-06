@@ -5,7 +5,7 @@ dependencies:
   - python=3.9
   - xarray
   - netcdf4
-  - numpy>=1.16
+  - numpy>=1.16,!=1.20
   - pytest
   - numpydoc
   - sphinx
