@@ -140,6 +140,21 @@ Preparing Pull Requests
 Release History
 ---------------
 
+v0.3.2 (not released)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Fix bug producing TypeError when weights is provided with
+  `keep_coords=True` :issue:`78`. By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+- Raise TypeError when weights is a dask array and bin edges are
+  not explicitly provided :issue:`12`. By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+
+v0.3.1
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Add DOI badge and CITATION.cff. By
+  `Julius Busecke <https://github.com/jbusecke>`_.
 
 v0.3.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~
