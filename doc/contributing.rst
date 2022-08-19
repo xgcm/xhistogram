@@ -143,7 +143,10 @@ Release History
 v0.3.2 (not released)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Raise TypeError when weights is a dask array and bin edges are
+- Fix bug producing TypeError when `weights` is provided with
+  `keep_coords=True` :issue:`78`. By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+- Raise TypeError when `weights` is a dask array and bin edges are
   not explicitly provided :issue:`12`. By
   `Dougie Squire <https://github.com/dougiesquire>`_.
 

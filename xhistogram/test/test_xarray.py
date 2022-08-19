@@ -175,16 +175,25 @@ def test_dims_and_coords():
 
 @pytest.mark.parametrize("number_of_inputs", [1, 2])
 @pytest.mark.parametrize("keep_coords", [True, False])
-def test_carry_coords(keep_coords, number_of_inputs):
+@pytest.mark.parametrize("include_weights", [True, False])
+def test_carry_coords(keep_coords, number_of_inputs, include_weights):
     time_axis = np.arange(40)
     X_axis = np.arange(10)
     Y_axis = np.arange(10)
+    weight_value = 0.5
+
     data = np.random.randint(
         low=0, high=100, size=(len(time_axis), len(X_axis), len(Y_axis))
     )
     da = xr.DataArray(
         data, coords=[time_axis, X_axis, Y_axis], dims=["time", "X", "Y"], name="one"
     )
+
+    if include_weights:
+        weights = xr.full_like(da, weight_value)
+    else:
+        weights = None
+
     # faking coordinates
     da["lon"] = da.X**2 + da.Y**2
     assert "lon" in da.coords
@@ -193,6 +202,7 @@ def test_carry_coords(keep_coords, number_of_inputs):
         *[da] * number_of_inputs,
         bins=[bins] * number_of_inputs,
         dim=["time"],
+        weights=weights,
         keep_coords=keep_coords
     )
     if keep_coords:
