@@ -41,6 +41,7 @@ class TestChunkingHypotheses:
         np.testing.assert_allclose(hist, h)
 
     # TODO mark as slow?
+    @settings(deadline=None)
     @given(chunk_shapes(n_dim=2, max_arr_len=8))
     def test_all_chunking_patterns_2d(self, chunks):
 
