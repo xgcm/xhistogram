@@ -7,7 +7,7 @@ from ..xarray import histogram
 pytest.importorskip("hypothesis")
 
 import hypothesis.strategies as st  # noqa
-from hypothesis import given  # noqa
+from hypothesis import given, settings  # noqa
 
 
 @st.composite
@@ -65,6 +65,7 @@ class TestChunkingHypotheses:
         np.testing.assert_allclose(hist, h.values)
 
     # TODO mark as slow?
+    @settings(deadline=None)
     @pytest.mark.parametrize("n_vars", [1, 2, 3, 4])
     @given(chunk_shapes(n_dim=2, max_arr_len=7))
     def test_all_chunking_patterns_dd_hist(self, n_vars, chunk_shapes):
