@@ -140,7 +140,7 @@ Preparing Pull Requests
 Release History
 ---------------
 
-v0.3.2 (not released)
+v0.3.2
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Fix bug producing TypeError when `weights` is provided with
