@@ -44,7 +44,7 @@ def _ensure_correctly_formatted_bins(bins, N_expected):
         return bins
     else:
         raise ValueError(
-            "The number of bin definitions doesn't match the number of args"
+            f"The number of bin definitions {len(bins)} doesn't match the number of args {N_expected}"
         )
 
 
@@ -65,7 +65,7 @@ def _ensure_correctly_formatted_range(range_, N_expected):
                     + "case of multiple args, range should be a list of such tuples"
                 )
         else:
-            raise ValueError("The number of ranges doesn't match the number of args")
+            raise ValueError(f"The number of ranges {len(range_)} doesn't match the number of args {N_expected}")
     else:
         return N_expected * [range_]
 
