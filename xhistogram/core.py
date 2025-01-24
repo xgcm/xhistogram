@@ -112,7 +112,7 @@ def _determine_block_chunks(bin_indices, block_size):
             # automatically pick a chunk size
             # this a a heueristic without much basis
             _MAX_CHUNK_SIZE = 10_000_000
-            block_size = min(_MAX_CHUNK_SIZE // N, M)
+            block_size = min(_MAX_CHUNK_SIZE // N + 1, M)
     assert isinstance(block_size, int)
     num_chunks = M // block_size
     block_chunks = num_chunks * (block_size,)
